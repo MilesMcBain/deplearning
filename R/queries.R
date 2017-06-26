@@ -13,8 +13,8 @@ depl_2run <- function(){
       install_list <- install_status[install_status$installed == FALSE,]
 
     message("From CRAN: \n------------------------ \n")
-      CRAN_packs <- available.packages() %>% tibble::as_tibble()
-      install_list <- append_CRAN_data(install_list, CRAN_packs)
+
+      install_list <- append_CRAN_data(install_list)
 
       purrr::pwalk(install_list[install_list$on_CRAN == TRUE,],
         function(package, to_install, ...){
@@ -29,6 +29,11 @@ depl_2run <- function(){
     if(length(packs_from_CRAN < n_missing)){
       #We're gonna look on github as well
 
+      message("From GitHub: \n------------------------ \n")
+
+        install_list <- append_gh_data(install_list)
+
+
     }
 
   }else{
@@ -36,12 +41,14 @@ depl_2run <- function(){
   }
 }
 
-append_CRAN_data <- function(install_list, CRAN_packs){
-
+append_CRAN_data <- function(install_list){
+  CRAN_packs <- available.packages() %>% tibble::as_tibble()
   install_list$on_CRAN <- purrr::map_lgl(install_list$package, ~ . %in% CRAN_packs$Package )
   install_list$dependencies <-
-    purrr::map(install_list$package, ~CRAN_packs$Depends[CRAN_packs$Package == .]) %>%
-    purrr::map(~gsub(x = ., pattern = "R\\s\\(.*\\),*", replacement = "")) %>%
+    purrr::map(install_list$package, ~paste(na.omit(CRAN_packs$Depends[CRAN_packs$Package == .]),
+                                       na.omit(CRAN_packs$Imports[CRAN_packs$Package == .]))) %>%
+    purrr::map(~gsub(x = ., pattern = "R\\s*\\(>=\\s*[0-9.]+\\),*", replacement = "", perl = TRUE)) %>%
+    purrr::map(~gsub(x = ., pattern = "\\(>=\\s*[0-9.]+\\)", replacement = "", perl = TRUE)) %>%
     purrr::map(~gsub(x = ., pattern = "\\s*", replacement = "")) %>%
     purrr::map(~strsplit(x = ., split = ",")) %>%
     purrr::map(unlist)
@@ -63,4 +70,20 @@ are_installed <- function(pack_list){
 find_package <- function(package){
   result <- find.package(package = package, quiet = TRUE)
   ifelse(length(result > 0), TRUE, FALSE)
+}
+
+append_gh_data <- function(install_list){
+  gh_packs <- get_gh_pkgs()
+  install_list$on_gh <- purrr::map_lgl(install_list$package, ~ . %in% gh_packs$pkg_name)
+
+}
+
+# From: jimhester/autoinst/R/package.R
+get_gh_pkgs <-function() {
+  res <- jsonlite::fromJSON("http://rpkg.gepuro.net/download")
+  res <- res$pkg_list
+  res$pkg_location <- res$pkg_name
+  res$pkg_org <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 1)
+  res$pkg_name <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 2)
+  res[!(res$pkg_org == "cran" | res$pkg_org == "Bioconductor-mirror"), ]
 }
