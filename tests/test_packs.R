@@ -9,5 +9,5 @@ p_load("devtools")
 
 require(packup)
 
-test_doc <- rstudioapi::getActiveDocumentContext()
-doc <- test_doc$contents
+doc <- rstudioapi::getActiveDocumentContext()$contents
+
