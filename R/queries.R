@@ -15,8 +15,9 @@ depl_2run <- function(){
 
       CRAN_df <- get_CRAN_data(install_list)
       if(nrow(CRAN_df) < n_missing){
-        GH_df <- get_gh_DESCRIPTION_data()
-      }
+         GH_df <- get_gh_data(install_list[!(install_list$package %in% CRAN_df$package),])
+      } else GH_df <- NA
+
 
 
       # message("From CRAN: \n------------------------ \n")
@@ -77,12 +78,15 @@ find_package <- function(package){
   ifelse(length(result > 0), TRUE, FALSE)
 }
 
-append_gh_data <- function(install_list){
+get_gh_data <- function(install_list){
   gh_packs <- get_gh_pkgs()
   install_list$on_gh <- purrr::map_lgl(install_list$package, ~ . %in% gh_packs$pkg_name)
-  installing_from_gh <- install_list$on_CRAN == FALSE & install_list$on_gh
-  install_list[installing_from_gh] %>%
-    purrr::map(get)
+  install_list <- install_list[install_list$on_gh]
+  install_list$repository <-
+    purrr::map_chr(install_list$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .])
+  install_list$description_data <-
+    purrr::map(install_list$repository, get_gh_DESCRIPTION_data)
+  install_list
 }
 
 # From: jimhester/autoinst/R/package.R
@@ -100,6 +104,11 @@ get_gh_DESCRIPTION_data <- function(repo){
   desc_data <- read.dcf(desc_url)
   names(desc_data) <- dimnames(desc_data)[[2]]
   desc_data <- as.list(desc_data)
-  desc_data[c("Package","Imports","Depends","Remotes","Version")] %>%
-    purrr::map(~strsplit(x = ., split = ",\n*"))
+  compact_data <- desc_data[c("Package","Imports","Depends","Remotes","Version")] %>%
+    purrr::map_chr(~ifelse(is.null(.),"",.)) %>%
+    purrr::map(~strsplit(x = ., split = ",\n*")) %>%
+    purrr::map(unlist)
+  names(compact_data) <- c("package","imports","depends","remotes","version")
+  compact_data
 }
+
