@@ -1,4 +1,4 @@
-depl_2run <- function(){
+depl_check_run <- function(){
   doc <- rstudioapi::getActiveDocumentContext()$contents
   lib_list <- find_doc_libs(doc)
 
@@ -7,11 +7,12 @@ depl_2run <- function(){
       package = lib_list,
       installed = are_installed(lib_list)
     )
+  installed_df <- get_installed_data(install_status[install_status$installed == TRUE,])
+
   n_missing <- sum(!install_status$installed)
   if(n_missing > 0){
     message(sprintf("Found %i package(s) that need to be installed to run this script \n",n_missing))
       install_list <- install_status[install_status$installed == FALSE,]
-
 
       CRAN_df <- get_CRAN_data(install_list)
       if(nrow(CRAN_df) < n_missing){
@@ -47,22 +48,17 @@ depl_2run <- function(){
   }
 }
 
-get_CRAN_data <- function(install_list){
-  CRAN_packs <- available.packages(fields = "Remotes") %>% tibble::as_tibble()
-  install_list$on_CRAN <- purrr::map_lgl(install_list$package, ~ . %in% CRAN_packs$Package )
-  install_list$dependencies <-
-    purrr::map(install_list$package, ~paste(na.omit(CRAN_packs$Depends[CRAN_packs$Package == .]),
+get_CRAN_data <- function(CRAN_install_list){
+  CRAN_packs <- available.packages() %>% tibble::as_tibble()
+  CRAN_install_list$on_CRAN <- purrr::map_lgl(CRAN_install_list$package, ~ . %in% CRAN_packs$Package )
+  CRAN_install_list$dependencies <-
+    purrr::map(CRAN_install_list$package, ~paste(na.omit(CRAN_packs$Depends[CRAN_packs$Package == .]),",",
                                        na.omit(CRAN_packs$Imports[CRAN_packs$Package == .]))) %>%
-    purrr::map(~gsub(x = ., pattern = "R\\s*\\(>=\\s*[0-9.]+\\),*", replacement = "", perl = TRUE)) %>%
-    purrr::map(~gsub(x = ., pattern = "\\(>=\\s*[0-9.]+\\)", replacement = "", perl = TRUE)) %>%
     purrr::map(~gsub(x = ., pattern = "\\s*", replacement = "")) %>%
     purrr::map(~strsplit(x = ., split = ",")) %>%
     purrr::map(unlist)
 
-  install_list$to_install <-
-    purrr::map(install_list$dependencies, ~.[!are_installed(.)])
-
-  install_list[install_list$on_CRAN == TRUE, c("package","dependencies","to_install")]
+  CRAN_install_list[CRAN_install_list$on_CRAN == TRUE, c("package","dependencies")]
 }
 
 are_installed <- function(pack_list){
@@ -78,15 +74,19 @@ find_package <- function(package){
   ifelse(length(result > 0), TRUE, FALSE)
 }
 
-get_gh_data <- function(install_list){
+get_gh_data <- function(GH_install_list){
   gh_packs <- get_gh_pkgs()
-  install_list$on_gh <- purrr::map_lgl(install_list$package, ~ . %in% gh_packs$pkg_name)
-  install_list <- install_list[install_list$on_gh]
-  install_list$repository <-
-    purrr::map_chr(install_list$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .])
-  install_list$description_data <-
-    purrr::map(install_list$repository, get_gh_DESCRIPTION_data)
-  install_list
+  GH_install_list$on_gh <- purrr::map_lgl(GH_install_list$package, ~ . %in% gh_packs$pkg_name)
+  GH_install_list <- GH_install_list[GH_install_list$on_gh]
+  GH_install_list$repository <-
+    purrr::map_chr(GH_install_list$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .])
+  GH_install_list$description_data <-
+    purrr::map(GH_install_list$repository, get_gh_DESCRIPTION_data)
+  GH_install_list$CRAN_dependencies <-
+    purrr::map(GH_install_list$description_data, ~c(.$depends, .$imports))
+  GH_install_list$GH_dependencies <-
+    purrr::map(GH_install_list$description_data, ~.$remotes)
+  GH_install_list
 }
 
 # From: jimhester/autoinst/R/package.R
@@ -105,10 +105,40 @@ get_gh_DESCRIPTION_data <- function(repo){
   names(desc_data) <- dimnames(desc_data)[[2]]
   desc_data <- as.list(desc_data)
   compact_data <- desc_data[c("Package","Imports","Depends","Remotes","Version")] %>%
-    purrr::map_chr(~ifelse(is.null(.),"",.)) %>%
+    purrr::map(~ifelse(is.null(.),"",.)) %>%
     purrr::map(~strsplit(x = ., split = ",\n*")) %>%
     purrr::map(unlist)
   names(compact_data) <- c("package","imports","depends","remotes","version")
   compact_data
+}
+
+get_installed_data <- function(installed_list){
+  CRAN_packs <- available.packages() %>% tibble::as_tibble()
+  installed_list$on_CRAN <-
+    purrr::map_lgl(installed_list$package, ~ . %in% CRAN_packs$Package )
+  installed_list$installed_ver <-
+    purrr::map_chr(installed_list$package, ~packageDescription(., fields = "Version", drop = TRUE))
+  installed_list$CRAN_ver <-
+    map_ifelse(.x = installed_list$package,
+               .p = installed_list$on_CRAN,
+               .f = ~CRAN_packs$Version[CRAN_packs$Package == .],
+               .e = NA)
+  installed_list$GH_acct <-
+    map_ifelse(.x = installed_list$package,
+               .p = !installed_list$on_CRAN,
+               .f = ~packageDescription(., fields = "GithubUsername", drop = TRUE),
+               .e = NA) %>% unlist()
+  installed_list$GH_repo <-
+    map_ifelse(.x = installed_list$package,
+               .p = !installed_list$on_CRAN,
+               .f = ~packageDescription(., fields = "GithubRepo", drop = TRUE),
+               .e = NA) %>% unlist()
+  installed_list$GH_ver <-
+    map_ifelse(.x = paste0(installed_list$GH_acct,"/",installed_list$GH_repo),
+               .p = !is.na(installed_list$GH_repo),
+               .f = ~get_gh_DESCRIPTION_data(.)$version,
+               .e = NA) %>% unlist()
+  installed_list
+
 }
 
