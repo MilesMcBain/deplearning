@@ -11,3 +11,9 @@ map_ifelse <- function(.x, .p, .f, .e, ...) {
   .x[!sel] <- .e
   .x
 }
+
+#A compare version that bails if either arg is NA
+compare_version <- function(a, b){
+  if(anyNA(c(a,b))){ NA }
+  else{ compareVersion(a,b) }
+}

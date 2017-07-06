@@ -122,7 +122,7 @@ get_installed_data <- function(installed_list){
     map_ifelse(.x = installed_list$package,
                .p = installed_list$on_CRAN,
                .f = ~CRAN_packs$Version[CRAN_packs$Package == .],
-               .e = NA)
+               .e = NA) %>% unlist()
   installed_list$GH_acct <-
     map_ifelse(.x = installed_list$package,
                .p = !installed_list$on_CRAN,
@@ -138,7 +138,15 @@ get_installed_data <- function(installed_list){
                .p = !is.na(installed_list$GH_repo),
                .f = ~get_gh_DESCRIPTION_data(.)$version,
                .e = NA) %>% unlist()
+  installed_list$CRAN_up_to_date <-
+    purrr::map2(.x = installed_list$CRAN_ver,
+                .y = installed_list$installed_ver,
+                .f = compare_version) %>% unlist()
+  installed_list$GH_up_to_date <-
+    purrr::map2( .x = installed_list$installed_ver,
+                 .y = installed_list$GH_ver,
+                 .f = compare_version) %>% unlist()
   installed_list
-
 }
+
 
