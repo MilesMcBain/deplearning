@@ -153,7 +153,7 @@ get_installed_data <- function(installed_list){
 gh_recursive_dependencies <- function(repo, repo_list = new.env()){
   assign(x = repo, value = get_gh_DESCRIPTION_data(repo), envir = repo_list)
   if(length(get(x = repo, envir = repo_list)$remotes) > 0){
-    purrr::map(get(x = repo, envir = repo_list)$remotes, ~gh_recursive_dependencies(.,repo_list))
+    purrr::walk(get(x = repo, envir = repo_list)$remotes, ~gh_recursive_dependencies(.,repo_list))
   }
   repo_list
 }
