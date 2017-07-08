@@ -53,7 +53,8 @@ get_CRAN_data <- function(CRAN_install_list){
   CRAN_install_list$on_CRAN <- purrr::map_lgl(CRAN_install_list$package, ~ . %in% CRAN_packs$Package )
   CRAN_install_list$dependencies <-
     purrr::map(CRAN_install_list$package, ~paste(na.omit(CRAN_packs$Depends[CRAN_packs$Package == .]),",",
-                                       na.omit(CRAN_packs$Imports[CRAN_packs$Package == .]))) %>%
+                                       na.omit(CRAN_packs$Imports[CRAN_packs$Package == .]),
+                                       na.omit(CRAN_packs$LinkingTo))) %>%
     purrr::map(~gsub(x = ., pattern = "\\s*", replacement = "")) %>%
     purrr::map(~strsplit(x = ., split = ",")) %>%
     purrr::map(unlist)
@@ -104,11 +105,11 @@ get_gh_DESCRIPTION_data <- function(repo){
   desc_data <- read.dcf(desc_url)
   names(desc_data) <- dimnames(desc_data)[[2]]
   desc_data <- as.list(desc_data)
-  compact_data <- desc_data[c("Package","Imports","Depends","Remotes","Version")] %>%
+  compact_data <- desc_data[c("Package","Imports","Depends","LinkingTo","Remotes","Version")] %>%
     purrr::map(~ifelse(is.null(.),"",.)) %>%
     purrr::map(~strsplit(x = ., split = ",\n*")) %>%
     purrr::map(unlist)
-  names(compact_data) <- c("package","imports","depends","remotes","version")
+  names(compact_data) <- c("package","imports","depends","linkingto","remotes","version")
   compact_data
 }
 
@@ -149,4 +150,10 @@ get_installed_data <- function(installed_list){
   installed_list
 }
 
-
+gh_recursive_dependencies <- function(repo, repo_list = new.env()){
+  assign(x = repo, value = get_gh_DESCRIPTION_data(repo), envir = repo_list)
+  if(length(get(x = repo, envir = repo_list)$remotes) > 0){
+    purrr::map(get(x = repo, envir = repo_list)$remotes, ~gh_recursive_dependencies(.,repo_list))
+  }
+  repo_list
+}
