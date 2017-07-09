@@ -103,6 +103,7 @@ get_gh_pkgs <-function() {
 get_gh_DESCRIPTION_data <- function(repo){
   desc_url = url(paste0("https://raw.githubusercontent.com/",repo,"/master/DESCRIPTION"))
   desc_data <- read.dcf(desc_url)
+  close(desc_url)
   names(desc_data) <- dimnames(desc_data)[[2]]
   desc_data <- as.list(desc_data)
   compact_data <- desc_data[c("Package","Imports","Depends","LinkingTo","Remotes","Version")] %>%
@@ -150,10 +151,13 @@ get_installed_data <- function(installed_list){
   installed_list
 }
 
-gh_recursive_dependencies <- function(repo, repo_list = new.env()){
-  assign(x = repo, value = get_gh_DESCRIPTION_data(repo), envir = repo_list)
-  if(length(get(x = repo, envir = repo_list)$remotes) > 0){
-    purrr::walk(get(x = repo, envir = repo_list)$remotes, ~gh_recursive_dependencies(.,repo_list))
-  }
-  repo_list
+gh_recursive_dependencies <- function(repo){
+  deps <- list()
+  deps[[1]] <- get_gh_DESCRIPTION_data(repo)
+  if(length(deps[[1]]$remotes) > 0){
+    results <- purrr::map(deps[[1]]$remotes, ~gh_recursive_dependencies_tr(.)) %>%
+      purrr::flatten()
+  } else{ results <- list() }
+  return_list <- c(deps, results)
+  return_list
 }
