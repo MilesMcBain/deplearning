@@ -184,8 +184,6 @@ get_R_dependency <- function(dep_spec){
   R_spec <- regmatches(dep_spec, R_spec_match)[[1]][[2]]
 }
 
-deps <- c(gh_dec$depends, gh_dec$imports,
-          gh_dec$linkingto)
 
 
 
