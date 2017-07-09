@@ -51,15 +51,12 @@ depl_check_run <- function(){
 get_CRAN_data <- function(CRAN_install_list){
   CRAN_packs <- available.packages() %>% tibble::as_tibble()
   CRAN_install_list$on_CRAN <- purrr::map_lgl(CRAN_install_list$package, ~ . %in% CRAN_packs$Package )
-  CRAN_install_list$dependencies <-
-    purrr::map(CRAN_install_list$package, ~paste(na.omit(CRAN_packs$Depends[CRAN_packs$Package == .]),",",
-                                       na.omit(CRAN_packs$Imports[CRAN_packs$Package == .]),
-                                       na.omit(CRAN_packs$LinkingTo))) %>%
-    purrr::map(~gsub(x = ., pattern = "\\s*", replacement = "")) %>%
-    purrr::map(~strsplit(x = ., split = ",")) %>%
-    purrr::map(unlist)
-
-  CRAN_install_list[CRAN_install_list$on_CRAN == TRUE, c("package","dependencies")]
+  CRAN_install_list$R_ver <-
+    purrr::map_chr(CRAN_install_list$package, ~get_R_dependency(CRAN_packs$Depends[CRAN_packs$Package == .]))
+  CRAN_install_list$recur_dependencies <-
+    tools::package_dependencies(packages = CRAN_install_list$package,
+                                recursive = TRUE)
+ CRAN_install_list
 }
 
 are_installed <- function(pack_list){
@@ -78,15 +75,19 @@ find_package <- function(package){
 get_gh_data <- function(GH_install_list){
   gh_packs <- get_gh_pkgs()
   GH_install_list$on_gh <- purrr::map_lgl(GH_install_list$package, ~ . %in% gh_packs$pkg_name)
-  GH_install_list <- GH_install_list[GH_install_list$on_gh]
+  GH_install_list <- GH_install_list[GH_install_list$on_gh,]
   GH_install_list$repository <-
-    purrr::map_chr(GH_install_list$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .])
+    purrr::map(GH_install_list$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .]) %>%
+    purrr::map_chr(`[`,1) #could return multiple repositories, if it has moved it will have a redirect anyway.
   GH_install_list$description_data <-
     purrr::map(GH_install_list$repository, get_gh_DESCRIPTION_data)
+  GH_install_list$R_ver <-
+    purrr::map_chr(GH_install_list$description_data, ~get_R_dependency(.$depends))
   GH_install_list$CRAN_dependencies <-
-    purrr::map(GH_install_list$description_data, ~c(.$depends, .$imports))
+    purrr::map(GH_install_list$description_data, ~c(.$depends, .$imports, .$linkingto))
   GH_install_list$GH_dependencies <-
     purrr::map(GH_install_list$description_data, ~.$remotes)
+
   GH_install_list
 }
 
@@ -161,3 +162,34 @@ gh_recursive_dependencies <- function(repo){
   return_list <- c(deps, results)
   return_list
 }
+
+get_R_dependency <- function(dep_spec){
+  R_spec_match <- regexec(pattern = "R\\s*\\(>=\\s*([0-9.]+)\\)",
+          text = dep_spec
+          )
+  R_spec <- regmatches(dep_spec, R_spec_match)[[1]][[2]]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
