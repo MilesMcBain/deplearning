@@ -51,6 +51,7 @@ depl_check_run <- function(){
 get_CRAN_data <- function(CRAN_install_list){
   CRAN_packs <- available.packages() %>% tibble::as_tibble()
   CRAN_install_list$on_CRAN <- purrr::map_lgl(CRAN_install_list$package, ~ . %in% CRAN_packs$Package )
+  CRAN_install_list <- CRAN_install_list[CRAN_install_list$on_CRAN,]
   CRAN_install_list$R_ver <-
     purrr::map_chr(CRAN_install_list$package, ~get_R_dependency(CRAN_packs$Depends[CRAN_packs$Package == .]))
   CRAN_install_list$recur_dependencies <-
@@ -152,15 +153,28 @@ get_installed_data <- function(installed_list){
   installed_list
 }
 
-gh_recursive_dependencies <- function(repo){
+gh_recursive_remotes <- function(repo){
   deps <- list()
   deps[[1]] <- get_gh_DESCRIPTION_data(repo)
   if(length(deps[[1]]$remotes) > 0){
-    results <- purrr::map(deps[[1]]$remotes, ~gh_recursive_dependencies_tr(.)) %>%
+    results <- purrr::map(deps[[1]]$remotes, ~gh_recursive_remotes(.)) %>%
       purrr::flatten()
   } else{ results <- list() }
   return_list <- c(deps, results)
   return_list
+}
+
+gh_recursive_deps <- function(description_data){
+
+  if(length(description_data$remotes) > 0){
+    gh_deps <-
+      purrr::map(description_data$remotes, gh_recursive_remotes) %>%
+      flatten()
+  }
+  deps <- c(description_data$depends, description_data$imports,
+            description_data$linkingto)
+  sanitise_deps(deps)
+
 }
 
 get_R_dependency <- function(dep_spec){
@@ -170,10 +184,8 @@ get_R_dependency <- function(dep_spec){
   R_spec <- regmatches(dep_spec, R_spec_match)[[1]][[2]]
 }
 
-
-
-
-
+deps <- c(gh_dec$depends, gh_dec$imports,
+          gh_dec$linkingto)
 
 
 

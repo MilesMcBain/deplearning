@@ -17,3 +17,8 @@ compare_version <- function(a, b){
   if(anyNA(c(a,b))){ NA }
   else{ compareVersion(a,b) }
 }
+
+sanitise_deps <- function(dep_list){
+  regexec(pattern = "\\(>=\\s*[0-9.]+\\)",
+          text = deps)
+}
