@@ -84,10 +84,8 @@ get_gh_data <- function(GH_install_list){
     purrr::map(GH_install_list$repository, get_gh_DESCRIPTION_data)
   GH_install_list$R_ver <-
     purrr::map_chr(GH_install_list$description_data, ~get_R_dependency(.$depends))
-  GH_install_list$CRAN_dependencies <-
-    purrr::map(GH_install_list$description_data, ~c(.$depends, .$imports, .$linkingto))
-  GH_install_list$GH_dependencies <-
-    purrr::map(GH_install_list$description_data, ~.$remotes)
+  GH_install_list$recur_dependencies <-
+    purrr::map(GH_install_list$description_data, gh_recursive_deps)
 
   GH_install_list
 }
@@ -158,28 +156,41 @@ gh_recursive_remotes <- function(repo, repo_list = new.env()){
   if(!exists(x = repo, envir = repo_list, inherits = FALSE)){
     assign(x = repo, value = get_gh_DESCRIPTION_data(repo), envir = repo_list)
     if(length(get(x = repo, envir = repo_list)$remotes) > 0){
-      purrr::walk(get(x = repo, envir = repo_list)$remotes, ~gh_recursive_remotes_env(.,repo_list))
+      purrr::walk(get(x = repo, envir = repo_list)$remotes, ~gh_recursive_remotes(.,repo_list))
     }
   }
   as.list(repo_list)
 }
 
 gh_recursive_deps <- function(description_data){
+  CRAN_deps <- vector()
+  GH_remotes <- vector()
 
   if(length(description_data$remotes) > 0){
-    gh_deps <-
-      purrr::map(description_data$remotes, gh_recursive_remotes) %>%
-      flatten() %>%
+    gh_deps <- purrr::map(description_data$remotes, gh_recursive_remotes) %>%
+      purrr::flatten()
+
+    CRAN_deps <-
+      gh_deps %>%
       purrr::map(`[`, c("depends","imports","linkingto")) %>%
       unlist() %>%
       sanitise_deps() %>%
       unique()
 
+    GH_remotes <-
+      gh_deps %>%
+      purrr::map(`[`, "remotes") %>%
+      unlist()
   }
-  deps <- c(description_data$depends, description_data$imports,
-            description_data$linkingto)
-  sanitise_deps(deps)
 
+  CRAN_deps <-
+    c(CRAN_deps,
+      sanitise_deps(c(description_data$depends, description_data$imports,
+                    description_data$linkingto))
+      ) %>%
+      unique()
+ result <- list(CRAN_deps = CRAN_deps, GH_remotes = GH_remotes)
+ result
 
 }
 

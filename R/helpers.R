@@ -18,8 +18,8 @@ compare_version <- function(a, b){
   else{ compareVersion(a,b) }
 }
 
-sanitise_deps <- function(dep_list){
-  dep_ver_matches <- regexec(pattern = "\\(>=\\s*[0-9.]+\\)",
+sanitise_deps <- function(deps){
+  dep_ver_matches <- regexec(pattern = "\\s*\\(>=\\s*[0-9.]+\\)",
           text = deps)
   #Remove Versions
   regmatches(deps, dep_ver_matches) <- ""
@@ -27,5 +27,5 @@ sanitise_deps <- function(dep_list){
   #find and remove R
   R_matches <- regexec(pattern = "R\\S*", text = deps)
   deps <- deps[R_matches == -1]
-  deps
+
 }
