@@ -169,11 +169,17 @@ gh_recursive_deps <- function(description_data){
   if(length(description_data$remotes) > 0){
     gh_deps <-
       purrr::map(description_data$remotes, gh_recursive_remotes) %>%
-      flatten()
+      flatten() %>%
+      purrr::map(`[`, c("depends","imports","linkingto")) %>%
+      unlist() %>%
+      sanitise_deps() %>%
+      unique()
+
   }
   deps <- c(description_data$depends, description_data$imports,
             description_data$linkingto)
   sanitise_deps(deps)
+
 
 }
 
@@ -183,9 +189,6 @@ get_R_dependency <- function(dep_spec){
           )
   R_spec <- regmatches(dep_spec, R_spec_match)[[1]][[2]]
 }
-
-
-
 
 
 
