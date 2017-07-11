@@ -153,15 +153,15 @@ get_installed_data <- function(installed_list){
   installed_list
 }
 
-gh_recursive_remotes <- function(repo){
-  deps <- list()
-  deps[[1]] <- get_gh_DESCRIPTION_data(repo)
-  if(length(deps[[1]]$remotes) > 0){
-    results <- purrr::map(deps[[1]]$remotes, ~gh_recursive_remotes(.)) %>%
-      purrr::flatten()
-  } else{ results <- list() }
-  return_list <- c(deps, results)
-  return_list
+gh_recursive_remotes <- function(repo, repo_list = new.env()){
+  #TODO replace with safer Recursion. :(
+  if(!exists(x = repo, envir = repo_list, inherits = FALSE)){
+    assign(x = repo, value = get_gh_DESCRIPTION_data(repo), envir = repo_list)
+    if(length(get(x = repo, envir = repo_list)$remotes) > 0){
+      purrr::walk(get(x = repo, envir = repo_list)$remotes, ~gh_recursive_remotes_env(.,repo_list))
+    }
+  }
+  as.list(repo_list)
 }
 
 gh_recursive_deps <- function(description_data){
