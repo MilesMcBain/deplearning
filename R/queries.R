@@ -8,20 +8,19 @@ depl_check_run <- function(){
       installed = are_installed(lib_list)
     )
   installed_df <- get_installed_data(install_status[install_status$installed == TRUE,])
-
+  n_behind_CRAN <- sum(installed_df$CRAN_up_to_date != 0)
   n_missing <- sum(!install_status$installed)
   if(n_missing > 0){
-    message(sprintf("Found %i package(s) that need to be installed to run this script \n",n_missing))
       install_list <- install_status[install_status$installed == FALSE,]
-
       CRAN_df <- get_CRAN_data(install_list)
       if(nrow(CRAN_df) < n_missing){
          GH_df <- get_gh_data(install_list[!(install_list$package %in% CRAN_df$package),])
       } else GH_df <- NA
 
+    message(sprintf("Found %i package(s) that need to be installed to run this script \n",n_missing))
 
 
-      # message("From CRAN: \n------------------------ \n")
+      #message("From CRAN: \n------------------------ \n")
 
       # purrr::pwalk(install_list[install_list$on_CRAN == TRUE,],
       #   function(package, to_install, ...){
@@ -33,15 +32,8 @@ depl_check_run <- function(){
       #   }
       # )
 
-    if(sum(install_list$on_CRAN) < n_missing){
-      #We're gonna look on github as well
-
-      message("From GitHub: \n------------------------ \n")
-
-        install_list <- append_gh_data(install_list)
 
 
-    }
 
   }else{
     print("Your library contains all packages mentioned this code. :)")
@@ -191,15 +183,8 @@ gh_recursive_deps <- function(description_data){
       unique()
  result <- list(CRAN_deps = CRAN_deps, GH_remotes = GH_remotes)
  result
-
 }
 
-get_R_dependency <- function(dep_spec){
-  R_spec_match <- regexec(pattern = "R\\s*\\(>=\\s*([0-9.]+)\\)",
-          text = dep_spec
-          )
-  R_spec <- regmatches(dep_spec, R_spec_match)[[1]][[2]]
-}
 
 
 

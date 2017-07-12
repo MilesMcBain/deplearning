@@ -1,13 +1,13 @@
 # Like map_if but with the option to specify a value for false cases.
 # E.g. NA, character(0) etc.
 map_ifelse <- function(.x, .p, .f, .e, ...) {
-  if (is_logical(.p)) {
+  if (purrr::is_logical(.p)) {
     stopifnot(length(.p) == length(.x))
     sel <- .p
   } else {
-    sel <- map_lgl(.x, .p, ...)
+    sel <- purrr::map_lgl(.x, .p, ...)
   }
-  .x[sel] <- map(.x[sel], .f, ...)
+  .x[sel] <- purrr::map(.x[sel], .f, ...)
   .x[!sel] <- .e
   .x
 }
@@ -28,4 +28,11 @@ sanitise_deps <- function(deps){
   R_matches <- regexec(pattern = "R\\S*", text = deps)
   deps <- deps[R_matches == -1]
 
+}
+
+get_R_dependency <- function(dep_spec){
+  R_spec_match <- regexec(pattern = "R\\s*\\(>=\\s*([0-9.]+)\\)",
+                          text = dep_spec
+  )
+  R_spec <- regmatches(dep_spec, R_spec_match)[[1]][[2]]
 }
