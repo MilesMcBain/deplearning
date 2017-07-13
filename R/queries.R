@@ -7,14 +7,16 @@ depl_check_run <- function(){
       package = lib_list,
       installed = are_installed(lib_list)
     )
-  installed_df <- get_installed_data(install_status[install_status$installed == TRUE,])
-  n_behind_CRAN <- sum(installed_df$CRAN_up_to_date != 0)
+  installed_df <- get_installed_data(install_status)
+  n_behind_CRAN <- sum(installed_df$CRAN_up_to_date == 1)
+  n_begind_GH <- sum(installed_df$GH_up_to_date == 1)
   n_missing <- sum(!install_status$installed)
-  if(n_missing > 0){
-      install_list <- install_status[install_status$installed == FALSE,]
-      CRAN_df <- get_CRAN_data(install_list)
+  if(n_missing + n_behind_CRAN + n_behind_gh > 0){
+      install_list <- installed_df[install_status$installed == FALSE |
+                                       installed_df$CRAN_up_to_date == 1,]
+      CRAN_df <- get_CRAN_data(install_list[install_list$on_CRAN,])
       if(nrow(CRAN_df) < n_missing){
-         GH_df <- get_gh_data(install_list[!(install_list$package %in% CRAN_df$package),])
+         GH_df <- get_gh_data(install_list[!(install_list$package %in% CRAN_df$package),c("package","installed_ver")])
       } else GH_df <- NA
 
     message(sprintf("Found %i package(s) that need to be installed to run this script \n",n_missing))
@@ -42,8 +44,6 @@ depl_check_run <- function(){
 
 get_CRAN_data <- function(CRAN_install_list){
   CRAN_packs <- available.packages() %>% tibble::as_tibble()
-  CRAN_install_list$on_CRAN <- purrr::map_lgl(CRAN_install_list$package, ~ . %in% CRAN_packs$Package )
-  CRAN_install_list <- CRAN_install_list[CRAN_install_list$on_CRAN,]
   CRAN_install_list$R_ver <-
     purrr::map_chr(CRAN_install_list$package, ~get_R_dependency(CRAN_packs$Depends[CRAN_packs$Package == .]))
   CRAN_install_list$recur_dependencies <-
@@ -111,7 +111,10 @@ get_installed_data <- function(installed_list){
   installed_list$on_CRAN <-
     purrr::map_lgl(installed_list$package, ~ . %in% CRAN_packs$Package )
   installed_list$installed_ver <-
-    purrr::map_chr(installed_list$package, ~packageDescription(., fields = "Version", drop = TRUE))
+    map_ifelse( .x = installed_list$package,
+                .p = installed_list$installed,
+                .f = ~packageDescription(., fields = "Version", drop = TRUE),
+                .e = NA) %>% unlist()
   installed_list$CRAN_ver <-
     map_ifelse(.x = installed_list$package,
                .p = installed_list$on_CRAN,
@@ -119,12 +122,12 @@ get_installed_data <- function(installed_list){
                .e = NA) %>% unlist()
   installed_list$GH_acct <-
     map_ifelse(.x = installed_list$package,
-               .p = !installed_list$on_CRAN,
+               .p = !installed_list$on_CRAN & installed_list$installed,
                .f = ~packageDescription(., fields = "GithubUsername", drop = TRUE),
                .e = NA) %>% unlist()
   installed_list$GH_repo <-
     map_ifelse(.x = installed_list$package,
-               .p = !installed_list$on_CRAN,
+               .p = !installed_list$on_CRAN & installed_list$installed,
                .f = ~packageDescription(., fields = "GithubRepo", drop = TRUE),
                .e = NA) %>% unlist()
   installed_list$GH_ver <-

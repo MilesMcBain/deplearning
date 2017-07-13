@@ -5,6 +5,7 @@ library(A3)
 library("abc")
 library(narnia)
 library(visdat)
+library(dplyr)
 
 p_load(xml2, jsonlite)
 p_load("devtools")
