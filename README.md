@@ -36,7 +36,7 @@ WORK IN PROGRESS
   njtierney/narnia, MilesMcBain/packup 
 ```
 
-Dependencies are identified using by pattern matching against common methods: `library(...)`, `require(...)`, `p_load(..., ..., )`, `...::func()`
+Dependencies are identified using pattern matching against common methods: `library(...)`, `require(...)`, `p_load(..., ..., )`, `...::func()`
 
 ## Future Work
 The plan is to extend this idea to:
