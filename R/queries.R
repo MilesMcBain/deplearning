@@ -53,12 +53,12 @@ depl_check_run <- function(lib_list){
     n_uptodate_installed <- length(lib_list) - (n_missing + n_behind_CRAN + n_behind_GH)
 
     if(n_missing + n_behind_CRAN + n_behind_GH > 0){
-      install_list <- installed_df[which(installed_df$installed == FALSE |
+      install_candidates <- installed_df[which(installed_df$installed == FALSE |
                                        installed_df$CRAN_up_to_date == -1 |
                                        installed_df$GH_up_to_date == -1),]
-      CRAN_df <- get_CRAN_data(install_list[install_list$on_CRAN,])
-      if(nrow(CRAN_df) < n_missing){
-         GH_df <- get_gh_data(install_list[!(install_list$package %in% CRAN_df$package),c("package","installed","installed_ver")])
+      CRAN_df <- get_CRAN_data(install_candidates[install_candidates$on_CRAN,])
+      if(nrow(CRAN_df) < n_missing + n_behind_CRAN + n_behind_GH){
+         GH_df <- get_gh_data(install_candidates[!(install_candidates$package %in% CRAN_df$package),c("package","installed","installed_ver")])
       } else GH_df <- data.frame()
       cat(" done.\n")
       if(n_uptodate_installed > 0){
@@ -82,12 +82,17 @@ depl_check_run <- function(lib_list){
           cat("\n")
       }
       if(sum(!CRAN_df$installed) > 0){
-        cat("[deplearning] ",clisymbols::symbol$cross," ", sum(!CRAN_df$installed), " Missing CRAN packages.\n\n", sep = "")
+        cat("[deplearning] ", clisymbols::symbol$cross," ", sum(!CRAN_df$installed), " Missing CRAN packages.\n\n", sep = "")
         cat(" ", paste0(CRAN_df$package[!CRAN_df$installed], collapse = ", "), "\n\n")
       }
       if(sum(!GH_df$installed) > 0){
-        cat("[deplearning] ",clisymbols::symbol$cross," ", sum(!GH_df$installed), " Missing GitHub packages.\n\n", sep = "")
+        cat("[deplearning] ", clisymbols::symbol$cross," ", sum(!GH_df$installed), " Missing GitHub packages.\n\n", sep = "")
         cat(" ", paste0(GH_df$repository[!GH_df$installed], collapse = ", "), "\n\n")
+      }
+      lost_pkgs <- lib_list[!(lib_list %in% c(installed_df$package[installed_df$installed], CRAN_df$package, GH_df$package))]
+      if(length(lost_pkgs) > 0){
+        cat("[deplearning]", clisymbols::symbol$cross, length(lost_pkgs), "Missing packages from untracked repositories.\n\n")
+        cat(" ", paste0(lost_pkgs, collapse = ", "), "\n\n")
       }
       required_R_ver <- max_R_version(c(CRAN_df$R_ver, GH_df$R_ver))
       current_R_ver <- paste0(version$major,".",version$minor)
@@ -103,14 +108,14 @@ depl_check_run <- function(lib_list){
   }
 }
 
-get_CRAN_data <- function(CRAN_install_list){
+get_CRAN_data <- function(CRAN_install_candidates){
   CRAN_packs <- get_CRAN_pkgs()
-  CRAN_install_list$R_ver <-
-    purrr::map_chr(CRAN_install_list$package, ~get_R_dependency(CRAN_packs$Depends[CRAN_packs$Package == .]))
-  CRAN_install_list$recur_dependencies <-
-    tools::package_dependencies(packages = CRAN_install_list$package,
+  CRAN_install_candidates$R_ver <-
+    purrr::map_chr(CRAN_install_candidates$package, ~get_R_dependency(CRAN_packs$Depends[CRAN_packs$Package == .]))
+  CRAN_install_candidates$recur_dependencies <-
+    tools::package_dependencies(packages = CRAN_install_candidates$package,
                                 recursive = TRUE)
- CRAN_install_list
+ CRAN_install_candidates
 }
 
 are_installed <- function(pack_list){
@@ -126,24 +131,24 @@ find_package <- function(package){
   ifelse(length(result > 0), TRUE, FALSE)
 }
 
-get_gh_data <- function(GH_install_list){
+get_gh_data <- function(GH_install_candidates){
   gh_packs <- get_gh_pkgs()
-  GH_install_list$on_GH <- purrr::map_lgl(GH_install_list$package, ~ . %in% gh_packs$pkg_name)
-  GH_install_list <- GH_install_list[GH_install_list$on_GH,]
-  if(!any(GH_install_list$on_GH)){
-    return(GH_install_list)
+  GH_install_candidates$on_GH <- purrr::map_lgl(GH_install_candidates$package, ~ . %in% gh_packs$pkg_name)
+  GH_install_candidates <- GH_install_candidates[GH_install_candidates$on_GH,]
+  if(!any(GH_install_candidates$on_GH)){
+    return(GH_install_candidates)
   }
-  GH_install_list$repository <-
-    purrr::map(GH_install_list$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .]) %>%
+  GH_install_candidates$repository <-
+    purrr::map(GH_install_candidates$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .]) %>%
     purrr::map_chr(`[`,1) #could return multiple repositories, if it has moved it will have a redirect anyway.
-  GH_install_list$description_data <-
-    purrr::map(GH_install_list$repository, get_gh_DESCRIPTION_data)
-  GH_install_list$R_ver <-
-    purrr::map_chr(GH_install_list$description_data, ~get_R_dependency(.$depends))
-  GH_install_list$recur_dependencies <-
-    purrr::map(GH_install_list$description_data, gh_recursive_deps)
+  GH_install_candidates$description_data <-
+    purrr::map(GH_install_candidates$repository, get_gh_DESCRIPTION_data)
+  GH_install_candidates$R_ver <-
+    purrr::map_chr(GH_install_candidates$description_data, ~get_R_dependency(.$depends))
+  GH_install_candidates$recur_dependencies <-
+    purrr::map(GH_install_candidates$description_data, gh_recursive_deps)
 
-  GH_install_list
+  GH_install_candidates
 }
 
 # From: jimhester/autoinst/R/package.R

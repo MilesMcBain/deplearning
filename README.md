@@ -17,7 +17,7 @@ WORK IN PROGRESS
 [deplearning] Starting check_run.
 [deplearning] Searching path . 
 [deplearning] Scanning 7 R source files... done.
-[deplearning] Found 22 dependencies.
+[deplearning] Found 23 dependencies.
 [deplearning] Fetching remote data... done.
 [deplearning] ✔ 15 Installed and up to date.
 
@@ -41,7 +41,11 @@ WORK IN PROGRESS
 
   njtierney/narnia, MilesMcBain/packup 
 
-[deplearning] ✔ Minimum R version to update & install is 3.3.1, you have 3.4.0.
+[deplearning] ✖ 1 Missing packages from untracked repositories.
+
+  notARealPackage 
+
+[deplearning] ✔ Minimum R version to update & install is 3.3.1, you have 3.4.0.`
 ```
 
 There is also an RStudio addin hook to search the dependencies in the currently active window.
