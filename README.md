@@ -50,4 +50,4 @@ Dependencies are identified using by pattern matching against common methods: `l
 The plan is to extend this idea to:
    
    * A prompt to automatically update and installed required dependencies.
-   * Estimation of time until code run based on analysis recursive dependencies. 
+   * Estimation of time until code can run based on analysis of recursive dependencies. 
