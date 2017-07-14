@@ -1,49 +1,66 @@
 depl_check_run <- function(){
-  doc <- rstudioapi::getActiveDocumentContext()$contents
-  lib_list <- find_doc_libs(doc)
-
-  install_status <-
-    tibble::tibble(
-      package = lib_list,
-      installed = are_installed(lib_list)
-    )
-  installed_df <- get_installed_data(install_status)
-  n_behind_CRAN <- sum(installed_df$CRAN_up_to_date == 1)
-  n_begind_GH <- sum(installed_df$GH_up_to_date == 1)
-  n_missing <- sum(!install_status$installed)
-  if(n_missing + n_behind_CRAN + n_behind_gh > 0){
-      install_list <- installed_df[install_status$installed == FALSE |
-                                       installed_df$CRAN_up_to_date == 1,]
+  cat("[deplearning] Starting check_run.\n")
+    doc <- rstudioapi::getActiveDocumentContext()$contents
+    lib_list <- find_doc_libs(doc)
+  if(length(lib_list) == 0){
+    cat("[deplearning] found no depenencies in this code.\n")
+    return()
+  }
+  cat(sprintf("[deplearning] Found %i dependencies.\n", length(lib_list)))
+    install_status <-
+      tibble::tibble(
+        package = lib_list,
+        installed = are_installed(lib_list)
+      )
+  cat("[deplearning] Fetching remote data...")
+    installed_df <- get_installed_data(install_status)
+    n_behind_CRAN <- sum(installed_df$CRAN_up_to_date == -1, na.rm = TRUE)
+    n_behind_GH <- sum(installed_df$GH_up_to_date == -1, na.rm = TRUE)
+    n_missing <- sum(!install_status$installed)
+    n_uptodate_installed <- length(lib_list) - (n_missing + n_behind_CRAN + n_behind_GH)
+    if(n_missing + n_behind_CRAN + n_behind_GH > 0){
+      install_list <- installed_df[which(installed_df$installed == FALSE |
+                                       installed_df$CRAN_up_to_date == -1 |
+                                       installed_df$GH_up_to_date == -1),]
       CRAN_df <- get_CRAN_data(install_list[install_list$on_CRAN,])
       if(nrow(CRAN_df) < n_missing){
-         GH_df <- get_gh_data(install_list[!(install_list$package %in% CRAN_df$package),c("package","installed_ver")])
+         GH_df <- get_gh_data(install_list[!(install_list$package %in% CRAN_df$package),c("package","installed","installed_ver")])
       } else GH_df <- NA
-
-    message(sprintf("Found %i package(s) that need to be installed to run this script \n",n_missing))
-
-
-      #message("From CRAN: \n------------------------ \n")
-
-      # purrr::pwalk(install_list[install_list$on_CRAN == TRUE,],
-      #   function(package, to_install, ...){
-      #     message(paste0(package,"\n"))
-      #     if(length(to_install > 0 )){
-      #       message(paste0("    - and missing deps: ",
-      #                    paste0(to_install, collapse = " "), "\n"))
-      #     }
-      #   }
-      # )
-
-
-
-
-  }else{
-    print("Your library contains all packages mentioned this code. :)")
+    }
+  cat(" done.\n")
+   if(n_uptodate_installed > 0){
+     cat("[deplearning] ",clisymbols::symbol$tick," ",n_uptodate_installed, " Installed and up to date.\n\n", sep = "")
+     cat("", paste0(installed_df$package[which(installed_df$installed == TRUE &
+                                                 (installed_df$CRAN_up_to_date >= 0 |
+                                                 installed_df$GH_up_to_date >= 0))], collapse = ", "),"\n\n")
+   }
+   if(n_behind_CRAN > 0){
+     cat("[deplearning] ",clisymbols::symbol$cross," ",n_behind_CRAN, " Installed but behind CRAN release.\n\n", sep = "")
+     print(as.data.frame(installed_df[which(installed_df$CRAN_up_to_date == -1),
+                                      c("package", "installed_ver","CRAN_ver")]),
+           row.names = FALSE)
+     cat("\n")
+   }
+  if(n_behind_GH > 0){
+      cat("[deplearning] ",clisymbols::symbol$cross," ",n_behind_GH, " Installed but behind GitHub version.\n\n", sep = "")
+      print(as.data.frame(installed_df[which(installed_df$GH_up_to_date == -1),
+                                       c("GH_repository", "installed_ver","GH_ver")]),
+            row.names = FALSE)
+      cat("\n")
   }
+  if(sum(!CRAN_df$installed) > 0){
+    cat("[deplearning] ",clisymbols::symbol$cross," ", sum(!CRAN_df$installed), " Missing CRAN packages.\n\n", sep = "")
+    cat(" ", paste0(CRAN_df$package[!CRAN_df$installed], collapse = ", "), "\n\n")
+  }
+  if(sum(!GH_df$installed) > 0){
+    cat("[deplearning] ",clisymbols::symbol$cross," ", sum(!GH_df$installed), " Missing GitHub packages.\n\n", sep = "")
+    cat(" ", paste0(GH_df$repository[!GH_df$installed], collapse = ", "), "\n\n")
+  }
+
 }
 
 get_CRAN_data <- function(CRAN_install_list){
-  CRAN_packs <- available.packages() %>% tibble::as_tibble()
+  CRAN_packs <- get_CRAN_pkgs()
   CRAN_install_list$R_ver <-
     purrr::map_chr(CRAN_install_list$package, ~get_R_dependency(CRAN_packs$Depends[CRAN_packs$Package == .]))
   CRAN_install_list$recur_dependencies <-
@@ -67,8 +84,11 @@ find_package <- function(package){
 
 get_gh_data <- function(GH_install_list){
   gh_packs <- get_gh_pkgs()
-  GH_install_list$on_gh <- purrr::map_lgl(GH_install_list$package, ~ . %in% gh_packs$pkg_name)
-  GH_install_list <- GH_install_list[GH_install_list$on_gh,]
+  GH_install_list$on_GH <- purrr::map_lgl(GH_install_list$package, ~ . %in% gh_packs$pkg_name)
+  GH_install_list <- GH_install_list[GH_install_list$on_GH,]
+  if(!any(GH_install_list$on_GH)){
+    return(GH_install_list)
+  }
   GH_install_list$repository <-
     purrr::map(GH_install_list$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .]) %>%
     purrr::map_chr(`[`,1) #could return multiple repositories, if it has moved it will have a redirect anyway.
@@ -83,14 +103,18 @@ get_gh_data <- function(GH_install_list){
 }
 
 # From: jimhester/autoinst/R/package.R
-get_gh_pkgs <-function() {
+get_gh_pkgs <- memoise::memoise(function() {
   res <- jsonlite::fromJSON("http://rpkg.gepuro.net/download")
   res <- res$pkg_list
   res$pkg_location <- res$pkg_name
   res$pkg_org <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 1)
   res$pkg_name <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 2)
   res[!(res$pkg_org == "cran" | res$pkg_org == "Bioconductor-mirror"), ]
-}
+})
+
+get_CRAN_pkgs <- memoise::memoise(function(){
+  tibble::as_tibble(available.packages())
+})
 
 get_gh_DESCRIPTION_data <- function(repo){
   desc_url = url(paste0("https://raw.githubusercontent.com/",repo,"/master/DESCRIPTION"))
@@ -107,7 +131,7 @@ get_gh_DESCRIPTION_data <- function(repo){
 }
 
 get_installed_data <- function(installed_list){
-  CRAN_packs <- available.packages() %>% tibble::as_tibble()
+  CRAN_packs <- get_CRAN_pkgs()
   installed_list$on_CRAN <-
     purrr::map_lgl(installed_list$package, ~ . %in% CRAN_packs$Package )
   installed_list$installed_ver <-
@@ -125,25 +149,31 @@ get_installed_data <- function(installed_list){
                .p = !installed_list$on_CRAN & installed_list$installed,
                .f = ~packageDescription(., fields = "GithubUsername", drop = TRUE),
                .e = NA) %>% unlist()
-  installed_list$GH_repo <-
+  installed_list$GH_packname <-
     map_ifelse(.x = installed_list$package,
                .p = !installed_list$on_CRAN & installed_list$installed,
                .f = ~packageDescription(., fields = "GithubRepo", drop = TRUE),
                .e = NA) %>% unlist()
+  installed_list$GH_repository <-
+    map_ifelse(.x = paste0(installed_list$GH_acct,"/",installed_list$GH_packname),
+               .p = !is.na(installed_list$GH_packname),
+               .f = ~.,
+               .e = NA) %>% unlist()
   installed_list$GH_ver <-
-    map_ifelse(.x = paste0(installed_list$GH_acct,"/",installed_list$GH_repo),
-               .p = !is.na(installed_list$GH_repo),
+    map_ifelse(.x = installed_list$GH_repository,
+               .p = !is.na(installed_list$GH_packname),
                .f = ~get_gh_DESCRIPTION_data(.)$version,
                .e = NA) %>% unlist()
   installed_list$CRAN_up_to_date <-
-    purrr::map2(.x = installed_list$CRAN_ver,
-                .y = installed_list$installed_ver,
+    purrr::map2(.x = installed_list$installed_ver,
+                .y = installed_list$CRAN_ver,
                 .f = compare_version) %>% unlist()
   installed_list$GH_up_to_date <-
     purrr::map2( .x = installed_list$installed_ver,
                  .y = installed_list$GH_ver,
                  .f = compare_version) %>% unlist()
   installed_list
+
 }
 
 gh_recursive_remotes <- function(repo, repo_list = new.env()){
@@ -184,6 +214,7 @@ gh_recursive_deps <- function(description_data){
                     description_data$linkingto))
       ) %>%
       unique()
+
  result <- list(CRAN_deps = CRAN_deps, GH_remotes = GH_remotes)
  result
 }

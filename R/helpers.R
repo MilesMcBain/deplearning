@@ -34,5 +34,9 @@ get_R_dependency <- function(dep_spec){
   R_spec_match <- regexec(pattern = "R\\s*\\(>=\\s*([0-9.]+)\\)",
                           text = dep_spec
   )
-  R_spec <- regmatches(dep_spec, R_spec_match)[[1]][[2]]
+  if(any(unlist(R_spec_match) == 1)){
+    R_spec <- regmatches(dep_spec, R_spec_match)[[1]][[2]]
+  }else{
+    "0.0.0"
+  }
 }
