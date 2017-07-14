@@ -45,7 +45,7 @@ WORK IN PROGRESS
 
   notARealPackage 
 
-[deplearning] ✔ Minimum R version to update & install is 3.3.1, you have 3.4.0.`
+[deplearning] ✔ Minimum R version to update & install is 3.3.1, you have 3.4.0.
 ```
 
 There is also an RStudio addin hook to search the dependencies in the currently active window.
