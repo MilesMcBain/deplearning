@@ -43,4 +43,4 @@ The plan is to extend this idea to:
    
    * Analysing a file argument or all files below a root folder argument.
    * A prompt to automatically update and installed required dependencies.
-   * Estimation of time until code run based on analysis recursive dependencies. 
+   * Estimation of time until code can run based on analysis of recursive dependencies. 
