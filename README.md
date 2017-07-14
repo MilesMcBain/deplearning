@@ -1,21 +1,27 @@
 # deplearning
-Utilise the synergy of algorithms and heuristics to unlock knowledge of R script/package dependencies.
+> Utilise the synergy of algorithms and heuristics to unlock knowledge of R script/package dependencies.
+
+Your first forays into understanding someone else's R analysis often involve flailing around trying to obtain all the required dependencies. This package will manage that for you by identifying your missing and out of date dependencies.
+
+Right now it can just tell about what it finds. Eventually it will prompt you to install and give you some information about the size of installation process.
 
 # Usage
 
 WORK IN PROGRESS
 
 ## Identify and Analyse Dependencies
-`depl_check_run()` will examine the code in the currently active RStudio pane and produce a dependency report:
+`depl_check(source_path)` will examine the code found below the path and produce a dependency report:
 
 ```
-> depl_check_run()
-[deplearning] Starting check_run.
-[deplearning] Found 14 dependencies.
+> depl_check()
+[deplearning] Starting check run.
+[deplearning] Searching path . 
+[deplearning] Scanning 7 R source files... done.
+[deplearning] Found 22 dependencies.
 [deplearning] Fetching remote data... done.
-[deplearning] ✔ 7 Installed and up to date.
+[deplearning] ✔ 15 Installed and up to date.
 
- datapasta, tidyr, rstudioapi, dplyr, xml2, jsonlite, devtools 
+ purrr, rstudioapi, tibble, clisymbols, memoise, jsonlite, knitr, datapasta, tidyr, dplyr, xml2, devtools, testthat 
 
 [deplearning] ✖ 1 Installed but behind CRAN release.
 
@@ -36,11 +42,12 @@ WORK IN PROGRESS
   njtierney/narnia, MilesMcBain/packup 
 ```
 
+There is also an RStudio addin hook to search the dependencies in the currently active window.
+
 Dependencies are identified using by pattern matching against common methods: `library(...)`, `require(...)`, `p_load(..., ..., )`, `...::func()`
 
 ## Future Work
 The plan is to extend this idea to:
    
-   * Analysing a file argument or all files below a root folder argument.
    * A prompt to automatically update and installed required dependencies.
    * Estimation of time until code run based on analysis recursive dependencies. 

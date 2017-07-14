@@ -1,7 +1,40 @@
-depl_check_run <- function(){
+depl_check <- function(source_path = "."){
+  stopifnot(is.character(source_path))
   cat("[deplearning] Starting check_run.\n")
-    doc <- rstudioapi::getActiveDocumentContext()$contents
+
+  if(is_R_file(source_path)){
+    cat("[deplearning] Scanning file", source_path)
+    doc <- readLines(con = source_path)
     lib_list <- find_doc_libs(doc)
+
+  }else{
+    cat("[deplearning] Searching path", source_path, "\n")
+    R_files <- dir(".", pattern = "\\.(rmd|r)$" , recursive = TRUE, ignore.case = TRUE)
+    if(length(R_files > 0)){
+      cat("[deplearning] Scanning", length(R_files), "R source files...")
+      lib_list <-
+        purrr::map(R_files, readLines) %>%
+        purrr::map(find_doc_libs) %>%
+        unlist() %>%
+        unique()
+    }else{
+      cat("[deplearning] Did not find any R source files in", source_path, ".\n")
+      return()
+    }
+  }
+  cat(" done.\n")
+  depl_check_run(lib_list)
+}
+
+depl_check_addin <- function(){
+  cat("[deplearning] Starting check run.\n")
+  cat("[deplearning] Scanning RStudio pane...")
+  lib_list <- find_doc_libs(rstudioapi::getActiveDocumentContext()$contents)
+  cat(" done.\n")
+  depl_check_run(lib_list)
+}
+
+depl_check_run <- function(lib_list){
   if(length(lib_list) == 0){
     cat("[deplearning] found no depenencies in this code.\n")
     return()

@@ -1,0 +1,4 @@
+Name: Check R Code Dependencies
+Description: Scan the current RStudio file for dependencies and check the library for them.
+Binding: depl_check_addin
+Interactive: false

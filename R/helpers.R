@@ -40,3 +40,8 @@ get_R_dependency <- function(dep_spec){
     "0.0.0"
   }
 }
+
+is_R_file <- function(filename){
+  regexpr(pattern =  "\\.([Rr]{1}[Mm]{1}[Dd]{1})|([Rr]{1})$",
+          text = filename) > 0
+}
