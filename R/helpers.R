@@ -30,6 +30,36 @@ sanitise_deps <- function(deps){
 
 }
 
+max_R_version <- function(vers){
+  vers <- sanitise_versions(vers)
+  vers_comps  <-
+    vers %>%
+    purrr::map(~strsplit(x = ., split = "\\.")) %>%
+    purrr::flatten()
+  vers_major <-
+    vers_comps %>%
+    purrr::map(`[[`,1) %>%
+    purrr::flatten() %>%
+    as.numeric()
+  vers_minor <-
+    vers_comps %>%
+    purrr::map(`[`,c(2,3)) %>%
+    purrr::map(~paste0(., collapse=".")) %>%
+    purrr::flatten() %>%
+    as.numeric()
+  max_ver <- vers[order(vers_major, vers_minor, decreasing = TRUE)][[1]]
+}
+
+sanitise_versions <- function(vers){
+num_dots <-
+    vers %>%
+    purrr::map(~gregexpr(text = ., pattern = "\\.", perl=TRUE)) %>%
+    purrr::flatten() %>%
+    purrr::map(length)
+vers[num_dots < 2] <- paste0(vers[num_dots < 2],".0")
+vers
+}
+
 get_R_dependency <- function(dep_spec){
   R_spec_match <- regexec(pattern = "R\\s*\\(>=\\s*([0-9.]+)\\)",
                           text = dep_spec

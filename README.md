@@ -14,7 +14,7 @@ WORK IN PROGRESS
 
 ```
 > depl_check()
-[deplearning] Starting check run.
+[deplearning] Starting check_run.
 [deplearning] Searching path . 
 [deplearning] Scanning 7 R source files... done.
 [deplearning] Found 22 dependencies.
@@ -40,6 +40,8 @@ WORK IN PROGRESS
 [deplearning] ✖ 2 Missing GitHub packages.
 
   njtierney/narnia, MilesMcBain/packup 
+
+[deplearning] ✔ Minimum R version to update & install is 3.3.1, you have 3.4.0.
 ```
 
 There is also an RStudio addin hook to search the dependencies in the currently active window.

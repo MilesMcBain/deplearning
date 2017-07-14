@@ -51,6 +51,7 @@ depl_check_run <- function(lib_list){
     n_behind_GH <- sum(installed_df$GH_up_to_date == -1, na.rm = TRUE)
     n_missing <- sum(!install_status$installed)
     n_uptodate_installed <- length(lib_list) - (n_missing + n_behind_CRAN + n_behind_GH)
+
     if(n_missing + n_behind_CRAN + n_behind_GH > 0){
       install_list <- installed_df[which(installed_df$installed == FALSE |
                                        installed_df$CRAN_up_to_date == -1 |
@@ -58,38 +59,48 @@ depl_check_run <- function(lib_list){
       CRAN_df <- get_CRAN_data(install_list[install_list$on_CRAN,])
       if(nrow(CRAN_df) < n_missing){
          GH_df <- get_gh_data(install_list[!(install_list$package %in% CRAN_df$package),c("package","installed","installed_ver")])
-      } else GH_df <- NA
-    }
-  cat(" done.\n")
-   if(n_uptodate_installed > 0){
-     cat("[deplearning] ",clisymbols::symbol$tick," ",n_uptodate_installed, " Installed and up to date.\n\n", sep = "")
-     cat("", paste0(installed_df$package[which(installed_df$installed == TRUE &
-                                                 (installed_df$CRAN_up_to_date >= 0 |
-                                                 installed_df$GH_up_to_date >= 0))], collapse = ", "),"\n\n")
-   }
-   if(n_behind_CRAN > 0){
-     cat("[deplearning] ",clisymbols::symbol$cross," ",n_behind_CRAN, " Installed but behind CRAN release.\n\n", sep = "")
-     print(as.data.frame(installed_df[which(installed_df$CRAN_up_to_date == -1),
-                                      c("package", "installed_ver","CRAN_ver")]),
-           row.names = FALSE)
-     cat("\n")
-   }
-  if(n_behind_GH > 0){
-      cat("[deplearning] ",clisymbols::symbol$cross," ",n_behind_GH, " Installed but behind GitHub version.\n\n", sep = "")
-      print(as.data.frame(installed_df[which(installed_df$GH_up_to_date == -1),
-                                       c("GH_repository", "installed_ver","GH_ver")]),
-            row.names = FALSE)
-      cat("\n")
-  }
-  if(sum(!CRAN_df$installed) > 0){
-    cat("[deplearning] ",clisymbols::symbol$cross," ", sum(!CRAN_df$installed), " Missing CRAN packages.\n\n", sep = "")
-    cat(" ", paste0(CRAN_df$package[!CRAN_df$installed], collapse = ", "), "\n\n")
-  }
-  if(sum(!GH_df$installed) > 0){
-    cat("[deplearning] ",clisymbols::symbol$cross," ", sum(!GH_df$installed), " Missing GitHub packages.\n\n", sep = "")
-    cat(" ", paste0(GH_df$repository[!GH_df$installed], collapse = ", "), "\n\n")
-  }
+      } else GH_df <- data.frame()
+      cat(" done.\n")
+      if(n_uptodate_installed > 0){
+         cat("[deplearning] ",clisymbols::symbol$tick," ",n_uptodate_installed, " Installed and up to date.\n\n", sep = "")
+         cat("", paste0(installed_df$package[which(installed_df$installed == TRUE &
+                                                     (installed_df$CRAN_up_to_date >= 0 |
+                                                     installed_df$GH_up_to_date >= 0))], collapse = ", "),"\n\n")
+       }
+       if(n_behind_CRAN > 0){
+         cat("[deplearning] ",clisymbols::symbol$cross," ",n_behind_CRAN, " Installed but behind CRAN release.\n\n", sep = "")
+         print(as.data.frame(installed_df[which(installed_df$CRAN_up_to_date == -1),
+                                          c("package", "installed_ver","CRAN_ver")]),
+               row.names = FALSE)
+         cat("\n")
+       }
+      if(n_behind_GH > 0){
+          cat("[deplearning] ",clisymbols::symbol$cross," ",n_behind_GH, " Installed but behind GitHub version.\n\n", sep = "")
+          print(as.data.frame(installed_df[which(installed_df$GH_up_to_date == -1),
+                                           c("GH_repository", "installed_ver","GH_ver")]),
+                row.names = FALSE)
+          cat("\n")
+      }
+      if(sum(!CRAN_df$installed) > 0){
+        cat("[deplearning] ",clisymbols::symbol$cross," ", sum(!CRAN_df$installed), " Missing CRAN packages.\n\n", sep = "")
+        cat(" ", paste0(CRAN_df$package[!CRAN_df$installed], collapse = ", "), "\n\n")
+      }
+      if(sum(!GH_df$installed) > 0){
+        cat("[deplearning] ",clisymbols::symbol$cross," ", sum(!GH_df$installed), " Missing GitHub packages.\n\n", sep = "")
+        cat(" ", paste0(GH_df$repository[!GH_df$installed], collapse = ", "), "\n\n")
+      }
+      required_R_ver <- max_R_version(c(CRAN_df$R_ver, GH_df$R_ver))
+      current_R_ver <- paste0(version$major,".",version$minor)
+      cat("[deplearning] ",ifelse(compare_version(current_R_ver,required_R_ver) <= 0,
+                                 clisymbols::symbol$cross,
+                                 clisymbols::symbol$tick),
+          " Minimum R version to update & install is ", required_R_ver, ", you have ", current_R_ver,".\n",sep="")
 
+    }else{
+      cat(" done.\n")
+      cat("[deplearning] ", clisymbols::symbol$cross, " All dependencies installed & up to date.\n\n", sep = "")
+      cat(" ",paste0(lib_list,collapse = ", "),"\n", sep="")
+  }
 }
 
 get_CRAN_data <- function(CRAN_install_list){
