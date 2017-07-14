@@ -10,7 +10,7 @@ Right now it can just tell about what it finds. Eventually it will prompt you to
 WORK IN PROGRESS
 
 ## Identify and Analyse Dependencies
-`depl_check(source_path)` will examine the code found below the path and produce a dependency report:
+`depl_check(source_path)` will examine the code found at or below `source_path` and produce a dependency report:
 
 ```
 > depl_check()
