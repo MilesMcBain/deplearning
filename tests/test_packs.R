@@ -9,7 +9,7 @@ library(dplyr)
 library(switchr)
 library("rtimicropem")
 library(notARealPackage)
-
+require("packagemetrics")
 p_load(xml2, jsonlite)
 p_load("devtools")
 
