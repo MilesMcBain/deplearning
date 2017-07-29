@@ -56,8 +56,11 @@ depl_check_run <- function(lib_list){
       install_candidates <- installed_df[which(installed_df$installed == FALSE |
                                        installed_df$CRAN_up_to_date == -1 |
                                        installed_df$GH_up_to_date == -1),]
+      cat(" CRAN... ")
       CRAN_df <- get_CRAN_data(install_candidates[install_candidates$on_CRAN,])
+
       if(nrow(CRAN_df) < n_missing + n_behind_CRAN + n_behind_GH){
+         cat(" GitHub... ")
          GH_df <- get_gh_data(install_candidates[!(install_candidates$package %in% CRAN_df$package),c("package","installed","installed_ver")])
       } else GH_df <- data.frame()
       cat(" done.\n")
@@ -94,12 +97,19 @@ depl_check_run <- function(lib_list){
         cat("[deplearning]", clisymbols::symbol$cross, length(lost_pkgs), "Missing packages from untracked repositories.\n\n")
         cat(" ", paste0(lost_pkgs, collapse = ", "), "\n\n")
       }
-      required_R_ver <- max_R_version(c(CRAN_df$R_ver, GH_df$R_ver))
-      current_R_ver <- paste0(version$major,".",version$minor)
-      cat("[deplearning] ",ifelse(compare_version(current_R_ver,required_R_ver) <= 0,
+      if((nrow(GH_df) + nrow(CRAN_DF)) > 0){
+        required_R_ver <- max_R_version(c(CRAN_df$R_ver, GH_df$R_ver))
+        current_R_ver <- paste0(version$major,".",version$minor)
+        cat("[deplearning] ",ifelse(compare_version(current_R_ver,required_R_ver) <= 0,
                                  clisymbols::symbol$cross,
                                  clisymbols::symbol$tick),
           " Minimum R version to update & install is ", required_R_ver, ", you have ", current_R_ver,".\n",sep="")
+          if(compare_version(current_R_ver,required_R_ver) >= 0){
+            # do install stuff
+          }else{
+            cat("[deplearning] R version needs to be updated to install & update dependencies.")
+          }
+        }
 
     }else{
       cat(" done.\n")
@@ -259,10 +269,14 @@ gh_recursive_deps <- function(description_data){
 
   CRAN_deps <-
     c(CRAN_deps,
-      sanitise_deps(c(description_data$depends, description_data$imports,
-                    description_data$linkingto))
-      ) %>%
-      unique()
+      sanitise_deps( c(description_data$depends,
+                       description_data$imports,
+                       description_data$linkingto)) ) %>%
+    unique() %>%
+    purrr::map(~tools::package_dependencies(packages = ., recursive = TRUE)) %>%
+    unlist() %>%
+    unique()
+
 
  result <- list(CRAN_deps = CRAN_deps, GH_remotes = GH_remotes)
  result
