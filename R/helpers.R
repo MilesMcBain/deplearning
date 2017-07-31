@@ -61,6 +61,7 @@ vers
 }
 
 get_R_dependency <- function(dep_spec){
+  if(!is.character(dep_spec) | is.na(dep_spec)) return("0.0.0")
   R_spec_match <- regexec(pattern = "R\\s*\\(>=\\s*([0-9.]+)\\)",
                           text = dep_spec
   )
@@ -75,3 +76,24 @@ is_R_file <- function(filename){
   regexpr(pattern =  "\\.([Rr]{1}[Mm]{1}[Dd]{1})|([Rr]{1})$",
           text = filename) > 0
 }
+
+get_gepuro_data <- memoise::memoise(function(package_name, mirrors = FALSE){
+  query_url <- "http://rpkg-api.gepuro.net/rpkg?q="
+  search_result <- jsonlite::fromJSON(paste0(query_url, package_name))
+  if(length(search_result) > 0){
+    exact_matches <- grepl(pattern = paste0(".*/",package_name,"$"),
+                           x = search_result$pkg_name)
+    search_result <- search_result[exact_matches,]
+    if(!mirrors){
+      mirror_matches <- grepl(pattern = "^cran|^Bioconductor-mirror",
+                              x = search_result$pkg_name)
+      search_result <- search_result[!mirror_matches,]
+    }
+    if(nrow(search_result) == 0){
+     search_result <- list()
+    }
+  }
+  search_result
+})
+
+

@@ -60,10 +60,10 @@ depl_check_run <- function(lib_list){
       CRAN_df <- get_CRAN_data(install_candidates[install_candidates$on_CRAN,])
 
       if(nrow(CRAN_df) < n_missing + n_behind_CRAN + n_behind_GH){
-         cat(" GitHub... ")
+         cat("GitHub... ")
          GH_df <- get_gh_data(install_candidates[!(install_candidates$package %in% CRAN_df$package),c("package","installed","installed_ver")])
       } else GH_df <- data.frame()
-      cat(" done.\n")
+      cat("done.\n")
       if(n_uptodate_installed > 0){
          cat("[deplearning] ",clisymbols::symbol$tick," ",n_uptodate_installed, " Installed and up to date.\n\n", sep = "")
          cat("", paste0(installed_df$package[which(installed_df$installed == TRUE &
@@ -97,7 +97,7 @@ depl_check_run <- function(lib_list){
         cat("[deplearning]", clisymbols::symbol$cross, length(lost_pkgs), "Missing packages from untracked repositories.\n\n")
         cat(" ", paste0(lost_pkgs, collapse = ", "), "\n\n")
       }
-      if((nrow(GH_df) + nrow(CRAN_DF)) > 0){
+      if((nrow(GH_df) + nrow(CRAN_df)) > 0){
         required_R_ver <- max_R_version(c(CRAN_df$R_ver, GH_df$R_ver))
         current_R_ver <- paste0(version$major,".",version$minor)
         cat("[deplearning] ",ifelse(compare_version(current_R_ver,required_R_ver) <= 0,
@@ -142,7 +142,7 @@ find_package <- function(package){
 }
 
 get_gh_data <- function(GH_install_candidates){
-  gh_packs <- get_gh_pkgs()
+  gh_packs <- get_gh_pkgs(GH_install_candidates$package)
   GH_install_candidates$on_GH <- purrr::map_lgl(GH_install_candidates$package, ~ . %in% gh_packs$pkg_name)
   GH_install_candidates <- GH_install_candidates[GH_install_candidates$on_GH,]
   if(!any(GH_install_candidates$on_GH)){
@@ -162,14 +162,18 @@ get_gh_data <- function(GH_install_candidates){
 }
 
 # From: jimhester/autoinst/R/package.R
-get_gh_pkgs <- memoise::memoise(function() {
-  res <- jsonlite::fromJSON("http://rpkg.gepuro.net/download")
-  res <- res$pkg_list
+get_gh_pkgs <- function(package_list){
+  res <-
+    purrr::map(package_list,
+              ~get_gepuro_data(.)) %>%
+    purrr::map(head,1) %>%
+    purrr::reduce(rbind)
+
   res$pkg_location <- res$pkg_name
   res$pkg_org <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 1)
   res$pkg_name <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 2)
-  res[!(res$pkg_org == "cran" | res$pkg_org == "Bioconductor-mirror"), ]
-})
+  res
+}
 
 get_CRAN_pkgs <- memoise::memoise(function(){
   tibble::as_tibble(available.packages())
