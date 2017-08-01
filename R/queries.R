@@ -1,6 +1,6 @@
 depl_check <- function(source_path = "."){
   stopifnot(is.character(source_path))
-  cat("[deplearning] Starting check_run.\n")
+  cat("[deplearning] Starting dependency check.\n")
 
   if(is_R_file(source_path)){
     cat("[deplearning] Scanning file", source_path)
@@ -147,14 +147,14 @@ depl_check_run <- function(lib_list){
           if(requireNamespace(devtools)){
             purrr::walk(GH_df$repository, ~devtools::install_github(.))
           }
-          cat("[deplearning] depl_check Finished install & update. Check for errors/warnings.\n")
+          cat("[deplearning] Dependency check finished install & update. Check for errors/warnings.\n")
         }else{
-          cat("[deplearning] depl_check Finished without install & update.\n")
+          cat("[deplearning] Dependency check finished without install & update.\n")
         }
 
       }else{
         cat("[deplearning] R version needs to be updated to install & update dependencies.")
-        cat("[deplearning] depl_check Finished without install & update.\n")
+        cat("[deplearning] Dependency check finished without install & update.\n")
       }
     }
   }else{
