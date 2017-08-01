@@ -1,9 +1,7 @@
 # deplearning
 > Utilise the synergy of algorithms and heuristics to unlock knowledge of R script/package dependencies.
 
-Your first forays into understanding someone else's R analysis often involve flailing around trying to obtain all the required dependencies. This package will manage that for you by identifying your missing and out of date dependencies.
-
-Right now it can just tell about what it finds. Eventually it will prompt you to install and give you some information about the size of installation process.
+Your first forays into understanding someone else's R analysis often involve flailing around trying to obtain all the required dependencies. This package will manage that for you by identifying your missing and out of date dependencies and offering a choice to automatically install & update.
 
 # Usage
 
@@ -17,11 +15,11 @@ WORK IN PROGRESS
 [deplearning] Starting check_run.
 [deplearning] Searching path . 
 [deplearning] Scanning 7 R source files... done.
-[deplearning] Found 23 dependencies.
-[deplearning] Fetching remote data... done.
+[deplearning] Found 24 dependencies.
+[deplearning] Fetching remote data... CRAN... GitHub... done.
 [deplearning] ✔ 15 Installed and up to date.
 
- purrr, rstudioapi, tibble, clisymbols, memoise, jsonlite, knitr, datapasta, tidyr, dplyr, xml2, devtools, testthat 
+ purrr, memoise, jsonlite, rstudioapi, tibble, clisymbols, knitr, datapasta, tidyr, dplyr, xml2, devtools, testthat 
 
 [deplearning] ✖ 1 Installed but behind CRAN release.
 
@@ -41,11 +39,22 @@ WORK IN PROGRESS
 
   njtierney/narnia, MilesMcBain/packup 
 
-[deplearning] ✖ 1 Missing packages from untracked repositories.
+[deplearning] ✖ 2 Missing packages from untracked repositories.
 
-  notARealPackage 
+  notARealPackage, packagemetrics 
 
 [deplearning] ✔ Minimum R version to update & install is 3.3.1, you have 3.4.0.
+[deplearning] ℹ  Update & install will include 8 new recursive depenencies.
+
+  pbapply, abc.data, quantreg, locfit, SparseM, MatrixModels, viridisLite, gridExtra 
+
+[deplearning] Would you like to update & install old and missing dependencies?
+
+1: Yes
+2: No
+
+Selection: 2
+[deplearning] depl_check Finished without install & update.
 ```
 
 There is also an RStudio addin hook to search the dependencies in the currently active window.
@@ -54,6 +63,4 @@ Dependencies are identified using by pattern matching against common methods: `l
 
 ## Future Work
 The plan is to extend this idea to:
-   
-   * A prompt to automatically update and installed required dependencies.
    * Estimation of time until code can run based on analysis of recursive dependencies. 
