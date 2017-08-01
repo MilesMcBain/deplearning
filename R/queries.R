@@ -59,7 +59,7 @@ depl_check_run <- function(lib_list){
     cat(" CRAN... ")
     CRAN_df <- get_CRAN_data(install_candidates[install_candidates$on_CRAN,])
 
-    if(nrow(CRAN_df) < n_missing + n_behind_CRAN + n_behind_GH){
+    if(nrow(CRAN_df) < length(lib_list)){
       cat("GitHub... ")
       GH_df <- get_gh_data(install_candidates[!(install_candidates$package %in% CRAN_df$package),c("package","installed","installed_ver")])
     } else GH_df <- data.frame()
@@ -105,47 +105,60 @@ depl_check_run <- function(lib_list){
                                   clisymbols::symbol$tick),
           " Minimum R version to update & install is ", required_R_ver, ", you have ", current_R_ver,".\n",sep="")
       if(compare_version(current_R_ver,required_R_ver) >= 0){
-        if(nrow(GH_df) > 0 & !requireNamespace("devtools", quietly = TRUE)){
-          cat("[deplearning] ",clisymbols::symbol$info,"  devtools package is required to install from GitHub. Added to CRAN dependencies.", sep = "")
-          CRAN_df[nrow(CRAN_df)+1, "package"] <- "devtools"
-          CRAN_df[nrow(CRAN_df)+1, "recur_dependencies"] <- tools::package_dependencies(packages = "devtools",
+        if(nrow(GH_df) > 0){
+          GH_df_recur_deps_CRAN <- unlist(purrr::map(GH_df$recur_dependencies, `[`, "CRAN_deps"))
+          GH_df_recur_deps_GH <- unlist(purrr::map(GH_df$recur_dependencies, `[`, "GH_deps"))
+          if(!requireNamespace("devtools", quietly = TRUE)){
+            cat("[deplearning] ",clisymbols::symbol$info,"  devtools package is required to install from GitHub. Added to CRAN dependencies.", sep = "")
+            CRAN_df[nrow(CRAN_df)+1, "package"] <- "devtools"
+            CRAN_df[nrow(CRAN_df)+1, "recur_dependencies"] <- tools::package_dependencies(packages = "devtools",
                                                                                         recursive = TRUE)
+          }
+        }else{
+          GH_df_recur_deps_CRAN <- vector()
+          GH_df_recur_deps_GH <- vector()
         }
-
+        if(nrow(CRAN_df) > 0){
+          CRAN_df_recur_deps <- unlist(CRAN_df$recur_dependencies)
+        }else{
+          CRAN_df_recur_deps <- vector()
+        }
         #deterimine missing recursive dependencies
-        all_recur_CRAN_deps <- unique( c(unlist(CRAN_df$recur_dependencies),
-                                         unlist(purrr::map(GH_df$recur_dependencies, `[`, "CRAN_deps"))
-        )
-        )
+        all_recur_CRAN_deps <- unique(c(GH_df_recur_deps_CRAN,
+                                 CRAN_df_recur_deps))
         if(length(all_recur_CRAN_deps) > 0 ){
           missing_recur_CRAN_deps <- all_recur_CRAN_deps[!are_installed(all_recur_CRAN_deps)]
         } else{
           missing_recur_CRAN_deps <- list()
         }
-        all_recur_GH_deps <- unlist(purrr::map(GH_df$recur_dependencies, `[`, "GH_deps"))
+        all_recur_GH_deps <- unique(GH_df_recur_deps_GH)
         if(length(all_recur_GH_deps) > 0){
           GH_pack_names <- all_recur_GH_deps %>%
             strsplit(split="/") %>%
             purrr::map(`[`,2)
           missing_recur_GH_deps <- all_recur_GH_deps[!are_installed(GH_pack_names)]
 
-        } else{
+        }else{
           missing_recur_GH_deps <- list()
         }
         all_missing_recur_deps <- c(missing_recur_CRAN_deps, missing_recur_GH_deps)
         if(length(all_missing_recur_deps) > 0){
-          cat("[deplearning] ",clisymbols::symbol$info,"  Update & install will include ", length(all_missing_recur_deps)," new recursive depenencies.\n\n", sep = "")
+          cat("[deplearning] ",clisymbols::symbol$info,"  Update & install will include ", length(all_missing_recur_deps)," new recursive dependencies.\n\n", sep = "")
           cat(" ", paste0(all_missing_recur_deps, collapse = ", "), "\n\n")
         }
         cat("[deplearning] Would you like to update & install old and missing dependencies?\n")
         install_choice <- menu(c("Yes", "No"))
         if(install_choice == 1){
           #install CRAN deps
-          cat("[deplearning] Installing from CRAN.\n")
-          install.packages(CRAN_df$package)
-          cat("[deplearning] Installing from GitHub.\n")
-          if(requireNamespace(devtools)){
-            purrr::walk(GH_df$repository, ~devtools::install_github(.))
+          if(nrow(CRAN_df) > 0){
+            cat("[deplearning] Installing from CRAN.\n")
+            install.packages(CRAN_df$package)
+          }
+          if(nrow(GH_df) > 0){
+            cat("[deplearning] Installing from GitHub.\n")
+            if(requireNamespace("devtools")){
+              purrr::walk(GH_df$repository, ~devtools::install_github(.))
+            }
           }
           cat("[deplearning] Dependency check finished install & update. Check for errors/warnings.\n")
         }else{
@@ -192,6 +205,9 @@ get_gh_data <- function(GH_install_candidates){
   GH_install_candidates$on_GH <- purrr::map_lgl(GH_install_candidates$package, ~ . %in% gh_packs$pkg_name)
   GH_install_candidates <- GH_install_candidates[GH_install_candidates$on_GH,]
   if(!any(GH_install_candidates$on_GH)){
+    GH_install_candidates$repository <- character(0)
+    GH_install_candidates$R_ver <- character(0)
+    GH_install_candidates$recur_dependencies <- character(0)
     return(GH_install_candidates)
   }
   GH_install_candidates$repository <-
@@ -214,11 +230,15 @@ get_gh_pkgs <- function(package_list){
               ~get_gepuro_data(.)) %>%
     purrr::map(head,1) %>%
     purrr::reduce(rbind)
-
-  res$pkg_location <- res$pkg_name
-  res$pkg_org <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 1)
-  res$pkg_name <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 2)
-  res
+  if(is.data.frame(res)){
+    res$pkg_location <- res$pkg_name
+    res$pkg_org <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 1)
+    res$pkg_name <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 2)
+    res
+  }
+  else{
+    res <- list()
+  }
 }
 
 get_CRAN_pkgs <- memoise::memoise(function(){

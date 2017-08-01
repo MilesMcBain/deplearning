@@ -1,3 +1,13 @@
+#' Pipe operator
+#'
+#' @name %>%
+#' @rdname pipe
+#' @keywords internal
+#' @export
+#' @importFrom magrittr %>%
+#' @usage lhs \%>\% rhs
+NULL
+
 # Like map_if but with the option to specify a value for false cases.
 # E.g. NA, character(0) etc.
 map_ifelse <- function(.x, .p, .f, .e, ...) {
@@ -61,7 +71,7 @@ vers
 }
 
 get_R_dependency <- function(dep_spec){
-  if(!is.character(dep_spec) | is.na(dep_spec)) return("0.0.0")
+  if(!(is.character(dep_spec) & length(dep_spec) == 0)) return("0.0.0")
   R_spec_match <- regexec(pattern = "R\\s*\\(>=\\s*([0-9.]+)\\)",
                           text = dep_spec
   )
