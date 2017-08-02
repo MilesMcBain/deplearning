@@ -69,6 +69,9 @@ depl_check_run <- function(lib_list){
     cat("[deplearning] found no depenencies in this code.\n")
     return()
   }
+  #remove base packages if present
+  lib_list <- lib_list[!lib_list %in% c("base","tools","utils")]
+
   cat(sprintf("[deplearning] Found %i dependencies.\n", length(lib_list)))
   pkg_install_status <-
     tibble::tibble(
@@ -80,7 +83,9 @@ depl_check_run <- function(lib_list){
   n_behind_CRAN <- sum(installed_pkg_df$CRAN_up_to_date == -1, na.rm = TRUE)
   n_behind_GH <- sum(installed_pkg_df$GH_up_to_date == -1, na.rm = TRUE)
   n_missing <- sum(!pkg_install_status$installed)
-  n_uptodate_installed <- length(lib_list) - (n_missing + n_behind_CRAN + n_behind_GH)
+  n_uptodate_installed <-
+    sum(installed_pkg_df$CRAN_up_to_date >= 0, na.rm = TRUE) +
+    sum(installed_pkg_df$GH_up_to_date >= 0, na.rm = TRUE)
 
   # Is there anything to install or update?
   if(n_missing + n_behind_CRAN + n_behind_GH > 0){
