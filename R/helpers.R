@@ -87,23 +87,19 @@ is_R_file <- function(filename){
           text = filename) > 0
 }
 
-get_gepuro_data <- memoise::memoise(function(package_name, mirrors = FALSE){
-  query_url <- "http://rpkg-api.gepuro.net/rpkg?q="
-  search_result <- jsonlite::fromJSON(paste0(query_url, package_name))
-  if(length(search_result) > 0){
-    exact_matches <- grepl(pattern = paste0(".*/",package_name,"$"),
-                           x = search_result$pkg_name)
-    search_result <- search_result[exact_matches,]
-    if(!mirrors){
-      mirror_matches <- grepl(pattern = "^cran|^Bioconductor-mirror",
-                              x = search_result$pkg_name)
-      search_result <- search_result[!mirror_matches,]
-    }
-    if(nrow(search_result) == 0){
-     search_result <- list()
-    }
+are_installed <- function(pack_list){
+  if(is.character(pack_list) & !is.null(pack_list)){
+    purrr::map_lgl(pack_list, ~find_package(package = .))
+  }else{
+    logical(0)
   }
-  search_result
-})
+}
+
+find_package <- function(package){
+  result <- find.package(package = package, quiet = TRUE)
+  ifelse(length(result > 0), TRUE, FALSE)
+}
+
+
 
 

@@ -1,3 +1,25 @@
+#' Check R source dependencies.
+#'
+#' `depl_check` analyses R source for dependency references:
+#' `library(<package>)`, `require(<package>)`, `<package>::func`,
+#' `pload(<package>, <package>)`. The dependencies are then located in either the
+#' local library, CRAN, or GitHub. Installed versions are compared with repository versions,
+#' with CRAN taking precendence over GitHub (Even if a local package was installed from GitHub).
+#'
+#' A report is output to the console containing information about missing and out of date dependencies.
+#' If there are any missing or out of date, a prompt is made to automatically update and install dependencies.
+#'
+#' @param source_path a file or directory path.
+#'
+#' @return A list of dataframes containing package metadata. Convenient for diagnostics or further processing.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' depl_check("~/repos/my_analysis")
+#' depl_check("./report.Rmd")
+#' }
+#'
 depl_check <- function(source_path = "."){
   stopifnot(is.character(source_path))
   cat("[deplearning] Starting dependency check.\n")
@@ -26,6 +48,12 @@ depl_check <- function(source_path = "."){
   depl_check_run(lib_list)
 }
 
+#' Check R dependencies in the currently active Rstudio pane.
+#'
+#' See `depl_check()` for details.
+#'
+#' @return A list of dataframes containing package metadata. Convenient for diagnostics or further processing.
+#' @export
 depl_check_addin <- function(){
   cat("[deplearning] Starting check run.\n")
   cat("[deplearning] Scanning RStudio pane...")
@@ -34,6 +62,8 @@ depl_check_addin <- function(){
   depl_check_run(lib_list)
 }
 
+# Subfunctuion of depl_check to allow the same body to be used for RStudio addin
+# and file path version.
 depl_check_run <- function(lib_list){
   if(length(lib_list) == 0){
     cat("[deplearning] found no depenencies in this code.\n")
@@ -175,90 +205,11 @@ depl_check_run <- function(lib_list){
     cat("[deplearning] ", clisymbols::symbol$cross, " All available dependencies installed & up to date.\n\n", sep = "")
     cat(" ",paste0(lib_list,collapse = ", "),"\n", sep="")
   }
+
+  list(install_status = installed_df,  CRAN_packs = CRAN_df, GH_packs = GH_df)
 }
 
-get_CRAN_data <- function(CRAN_install_candidates){
-  CRAN_packs <- get_CRAN_pkgs()
-  CRAN_install_candidates$R_ver <-
-    purrr::map_chr(CRAN_install_candidates$package, ~get_R_dependency(CRAN_packs$Depends[CRAN_packs$Package == .]))
-  CRAN_install_candidates$recur_dependencies <-
-    tools::package_dependencies(packages = CRAN_install_candidates$package,
-                                recursive = TRUE)
- CRAN_install_candidates
-}
-
-are_installed <- function(pack_list){
-  if(is.character(pack_list) & !is.null(pack_list)){
-    purrr::map_lgl(pack_list, ~find_package(package = .))
-  }else{
-    logical(0)
-  }
-}
-
-find_package <- function(package){
-  result <- find.package(package = package, quiet = TRUE)
-  ifelse(length(result > 0), TRUE, FALSE)
-}
-
-get_gh_data <- function(GH_install_candidates){
-  gh_packs <- get_gh_pkgs(GH_install_candidates$package)
-  GH_install_candidates$on_GH <- purrr::map_lgl(GH_install_candidates$package, ~ . %in% gh_packs$pkg_name)
-  GH_install_candidates <- GH_install_candidates[GH_install_candidates$on_GH,]
-  if(!any(GH_install_candidates$on_GH)){
-    GH_install_candidates$repository <- character(0)
-    GH_install_candidates$R_ver <- character(0)
-    GH_install_candidates$recur_dependencies <- character(0)
-    return(GH_install_candidates)
-  }
-  GH_install_candidates$repository <-
-    purrr::map(GH_install_candidates$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .]) %>%
-    purrr::map_chr(`[`,1) #could return multiple repositories, if it has moved it will have a redirect anyway.
-  GH_install_candidates$description_data <-
-    purrr::map(GH_install_candidates$repository, get_gh_DESCRIPTION_data)
-  GH_install_candidates$R_ver <-
-    purrr::map_chr(GH_install_candidates$description_data, ~get_R_dependency(.$depends))
-  GH_install_candidates$recur_dependencies <-
-    purrr::map(GH_install_candidates$description_data, gh_recursive_deps)
-
-  GH_install_candidates
-}
-
-# From: jimhester/autoinst/R/package.R
-get_gh_pkgs <- function(package_list){
-  res <-
-    purrr::map(package_list,
-              ~get_gepuro_data(.)) %>%
-    purrr::map(head,1) %>%
-    purrr::reduce(rbind)
-  if(is.data.frame(res)){
-    res$pkg_location <- res$pkg_name
-    res$pkg_org <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 1)
-    res$pkg_name <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 2)
-    res
-  }
-  else{
-    res <- list()
-  }
-}
-
-get_CRAN_pkgs <- memoise::memoise(function(){
-  tibble::as_tibble(available.packages())
-})
-
-get_gh_DESCRIPTION_data <- function(repo){
-  desc_url = url(paste0("https://raw.githubusercontent.com/",repo,"/master/DESCRIPTION"))
-  desc_data <- read.dcf(desc_url)
-  close(desc_url)
-  names(desc_data) <- dimnames(desc_data)[[2]]
-  desc_data <- as.list(desc_data)
-  compact_data <- desc_data[c("Package","Imports","Depends","LinkingTo","Remotes","Version")] %>%
-    purrr::map(~ifelse(is.null(.),"",.)) %>%
-    purrr::map(~strsplit(x = ., split = ",\n*")) %>%
-    purrr::map(unlist)
-  names(compact_data) <- c("package","imports","depends","linkingto","remotes","version")
-  compact_data
-}
-
+# This helper appends metadata from CRAN and GitHub to locally installed dependencies.
 get_installed_data <- function(installed_list){
   CRAN_packs <- get_CRAN_pkgs()
   installed_list$on_CRAN <-
@@ -305,52 +256,7 @@ get_installed_data <- function(installed_list){
 
 }
 
-gh_recursive_remotes <- function(repo, repo_list = new.env()){
-  #TODO replace with safer Recursion. :(
-  if(!exists(x = repo, envir = repo_list, inherits = FALSE)){
-    assign(x = repo, value = get_gh_DESCRIPTION_data(repo), envir = repo_list)
-    if(length(get(x = repo, envir = repo_list)$remotes) > 0){
-      purrr::walk(get(x = repo, envir = repo_list)$remotes, ~gh_recursive_remotes(.,repo_list))
-    }
-  }
-  as.list(repo_list)
-}
 
-gh_recursive_deps <- function(description_data){
-  CRAN_deps <- vector()
-  GH_remotes <- vector()
-
-  if(length(description_data$remotes) > 0){
-    gh_deps <- purrr::map(description_data$remotes, gh_recursive_remotes) %>%
-      purrr::flatten()
-
-    CRAN_deps <-
-      gh_deps %>%
-      purrr::map(`[`, c("depends","imports","linkingto")) %>%
-      unlist() %>%
-      sanitise_deps() %>%
-      unique()
-
-    GH_remotes <-
-      gh_deps %>%
-      purrr::map(`[`, "remotes") %>%
-      unlist()
-  }
-
-  CRAN_deps <-
-    c(CRAN_deps,
-      sanitise_deps( c(description_data$depends,
-                       description_data$imports,
-                       description_data$linkingto)) ) %>%
-    unique() %>%
-    purrr::map(~tools::package_dependencies(packages = ., recursive = TRUE)) %>%
-    unlist() %>%
-    unique()
-
-
- result <- list(CRAN_deps = CRAN_deps, GH_remotes = GH_remotes)
- result
-}
 
 
 

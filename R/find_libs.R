@@ -6,6 +6,9 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' find_doc_libs(c("library(datapasta)\n", "devtools::check()\n", "#require(shist)"))
+#' }
 find_doc_libs <- function(doc){
   # filter comments
   comments <- "^\\s*#"
