@@ -7,6 +7,12 @@
 #'
 #' @examples
 find_doc_libs <- function(doc){
+  # filter comments
+  comments <- "^\\s*#"
+  comment_lines <- grepl(pattern = comments, x = doc)
+  doc <- doc[!comment_lines]
+
+  # find dependencies
   patterns <- list(
     library = "(?<=library\\()\"*[a-zA-Z0-9]+\"*(?=\\))",
     require   = "(?<=require\\()\"*[a-zA-Z0-9]+\"*(?=\\))",
@@ -17,7 +23,7 @@ find_doc_libs <- function(doc){
   lib_matches <- purrr::map(match_pos, ~regmatches(doc, .)) %>%
     lapply(unlist)
 
-  #post processing cleanup of matches
+  # post processing cleanup of matches
   final_matches <-
     lib_matches %>%
     purrr::map(~gsub(x = ., pattern = "\"", replacement ="")) %>%
