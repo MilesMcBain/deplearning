@@ -71,7 +71,7 @@ vers
 }
 
 get_R_dependency <- function(dep_spec){
-  if(!(is.character(dep_spec) & length(dep_spec) == 0)) return("0.0.0")
+  if(!(is.character(dep_spec) & length(dep_spec) > 0)) return("0.0.0")
   R_spec_match <- regexec(pattern = "R\\s*\\(>=\\s*([0-9.]+)\\)",
                           text = dep_spec
   )

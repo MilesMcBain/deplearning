@@ -12,41 +12,37 @@ WORK IN PROGRESS
 
 ```
 > depl_check()
-[deplearning] Starting check_run.
+[deplearning] Starting dependency check.
 [deplearning] Searching path . 
 [deplearning] Scanning 7 R source files... done.
-[deplearning] Found 24 dependencies.
+[deplearning] Found 29 dependencies.
 [deplearning] Fetching remote data... CRAN... GitHub... done.
-[deplearning] ✔ 15 Installed and up to date.
+[deplearning] ✔ 14 Installed and up to date.
 
- purrr, memoise, jsonlite, rstudioapi, tibble, clisymbols, knitr, datapasta, tidyr, dplyr, xml2, devtools, testthat 
+ purrr, memoise, jsonlite, rstudioapi, tibble, clisymbols, knitr, tidyr, packagemetrics, xml2, devtools, testthat 
 
-[deplearning] ✖ 1 Installed but behind CRAN release.
+[deplearning] ✖ 2 Installed but behind CRAN release.
 
  package installed_ver CRAN_ver
- switchr        0.9.24   0.11.2
+  visdat    0.0.5.9000    0.1.0
+   dplyr         0.7.1    0.7.2
 
-[deplearning] ✖ 1 Installed but behind GitHub version.
+[deplearning] ✖ 8 Missing CRAN packages.
 
-      GH_repository installed_ver GH_ver
- maelle/rtimicropem           1.2    1.3
+  datapasta, A3, abc, switchr, dejaVu, Rborist, kpmt, fasjem 
 
-[deplearning] ✖ 3 Missing CRAN packages.
+[deplearning] ✖ 4 Missing GitHub packages.
 
-  A3, abc, visdat 
+  njtierney/naniar, maelle/rtimicropem, benmarwick/rrtools, MilesMcBain/packup 
 
-[deplearning] ✖ 2 Missing GitHub packages.
+[deplearning] ✖ 1 Missing packages from untracked repositories.
 
-  njtierney/narnia, MilesMcBain/packup 
-
-[deplearning] ✖ 2 Missing packages from untracked repositories.
-
-  notARealPackage, packagemetrics 
+  notARealPackage 
 
 [deplearning] ✔ Minimum R version to update & install is 3.3.1, you have 3.4.0.
-[deplearning] ℹ  Update & install will include 8 new recursive depenencies.
+[deplearning] ℹ  Update & install will include 18 new recursive dependencies.
 
-  pbapply, abc.data, quantreg, locfit, SparseM, MatrixModels, viridisLite, gridExtra 
+  maps, gistr, assertive.base, assertive.files, assertive.numbers, assertive.properties, assertive.reflection, assertive.strings, assertive.types, pbapply, abc.data, quantreg, locfit, SparseM, MatrixModels, RJSONIO, RcppArmadillo, matrixStats 
 
 [deplearning] Would you like to update & install old and missing dependencies?
 
@@ -54,7 +50,7 @@ WORK IN PROGRESS
 2: No
 
 Selection: 2
-[deplearning] depl_check Finished without install & update.
+[deplearning] Dependency check finished without install & update.
 ```
 
 There is also an RStudio addin hook to search the dependencies in the currently active window.
