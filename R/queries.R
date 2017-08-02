@@ -257,7 +257,7 @@ depl_check_run <- function(lib_list){
 
   # Finally return the lists of packages found installed, and in tracked repositories
   # for diagnostics or further processing. These may be empty dataframes.
-  list(install_status = installed_pkg_df,  CRAN_packs = CRAN_df, GH_packs = GH_df)
+  invisible(list(install_status = installed_pkg_df,  CRAN_packs = CRAN_df, GH_packs = GH_df))
 }
 
 # This helper appends metadata from CRAN and GitHub to locally installed dependencies.
