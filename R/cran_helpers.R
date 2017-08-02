@@ -1,3 +1,5 @@
+# Given a data.frame containing a package column, append package dependency metadata from
+# CRAN to all packages.
 get_CRAN_data <- function(CRAN_install_candidates){
   CRAN_packs <- get_CRAN_pkgs()
   CRAN_install_candidates$R_ver <-
@@ -8,6 +10,7 @@ get_CRAN_data <- function(CRAN_install_candidates){
   CRAN_install_candidates
 }
 
+# Fetch available CRAN packages.
 get_CRAN_pkgs <- memoise::memoise(function(){
   tibble::as_tibble(available.packages())
 })

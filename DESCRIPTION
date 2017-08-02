@@ -1,18 +1,25 @@
 Package: deplearning
 Title: Analyse Dependencies of R Code
-Version: 0.0.0.9000
-Authors@R: person("Miles", "McBain", email = "miles.mcbain@gmail.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-Depends: 
-    R (>= 3.4.0)
-Imports: 
+Version: 0.4.0
+Authors@R: c(
+    person("Miles", "McBain", email = "miles.mcbain@gmail.com", role = c("aut", "cre")),
+    person("Jim","Hester", role = "ctb"),
+    person("@Gepuro", role = "ctb"))
+Description: Check R source files or directories for dependencies. Determine if those
+   dependencies are installed and up to date, and offer a prompt to automagically 
+   install & update from CRAN and GitHub as necessary.
+Depends:
+    R (>= 3.3.1)
+Imports:
     purrr,
     tibble,
     jsonlite,
     magrittr,
     memoise
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Suggests: testthat
 RoxygenNote: 6.0.1
+URL: https://github.com/milesmcbain/deplearning
+BugReports: https://github.com/milesmcbain/deplearning/issues

@@ -5,8 +5,6 @@ Your first forays into understanding someone else's R analysis often involve fla
 
 # Usage
 
-WORK IN PROGRESS
-
 ## Identify and Analyse Dependencies
 `depl_check(source_path)` will examine the code found at or below `source_path` and produce a dependency report:
 
@@ -60,3 +58,9 @@ Dependencies are identified using by pattern matching against common methods: `l
 ## Future Work
 The plan is to extend this idea to:
    * Estimation of time until code can run based on analysis of recursive dependencies. 
+
+## With Thanks To
+
+* [jimhester](https://github.com/jimhester) for code I adapted from his package `autoinst`. 
+* [gepuro](https://twitter.com/gepuro) for the closest thing R has to a [package name resolution service](http://rpkg.gepuro.net/), and for making me an API! :heart_eyes:
+* [gmbecker](https://github.com/gmbecker) for `switchr`, without which testing this package would have been a cumbersome nightmare.

@@ -1,7 +1,14 @@
+# Given a data.frame containing a package column, append GitHub metadata for
+# each package.
 get_gh_data <- function(GH_install_candidates){
   gh_packs <- get_gh_pkgs(GH_install_candidates$package)
   GH_install_candidates$on_GH <- purrr::map_lgl(GH_install_candidates$package, ~ . %in% gh_packs$pkg_name)
+
+  # Filter out packages not on Github
   GH_install_candidates <- GH_install_candidates[GH_install_candidates$on_GH,]
+
+  # If no packages were found on Github, return a empty dataframe with
+  # consistent structure.
   if(!any(GH_install_candidates$on_GH)){
     GH_install_candidates$repository <- character(0)
     GH_install_candidates$R_ver <- character(0)
@@ -10,7 +17,7 @@ get_gh_data <- function(GH_install_candidates){
   }
   GH_install_candidates$repository <-
     purrr::map(GH_install_candidates$package, ~gh_packs$pkg_location[gh_packs$pkg_name == .]) %>%
-    purrr::map_chr(`[`,1) #could return multiple repositories, if it has moved it will have a redirect anyway.
+    purrr::map_chr(`[`,1) # could return multiple repositories, if it has moved it will have a redirect anyway.
   GH_install_candidates$description_data <-
     purrr::map(GH_install_candidates$repository, get_gh_DESCRIPTION_data)
   GH_install_candidates$R_ver <-
@@ -21,11 +28,13 @@ get_gh_data <- function(GH_install_candidates){
   GH_install_candidates
 }
 
+# Given a package repository, read the DESCRIPTION file from GitHub and
+# get dependencies and version.
 get_gh_DESCRIPTION_data <- function(repo){
   desc_url = url(paste0("https://raw.githubusercontent.com/",repo,"/master/DESCRIPTION"))
   desc_data <- read.dcf(desc_url)
   close(desc_url)
-  names(desc_data) <- dimnames(desc_data)[[2]]
+  names(desc_data) <- dimnames(desc_data)[[2]] # Fix structure of this wacky list.
   desc_data <- as.list(desc_data)
   compact_data <- desc_data[c("Package","Imports","Depends","LinkingTo","Remotes","Version")] %>%
     purrr::map(~ifelse(is.null(.),"",.)) %>%
@@ -35,6 +44,9 @@ get_gh_DESCRIPTION_data <- function(repo){
   compact_data
 }
 
+# A recursive function to follow and collect DESCRIPTION data from Github
+# packages referenced in the LinkingTo field. Not protected against stack overflow, but deep
+# recursion in this field is unlikely.
 gh_recursive_remotes <- function(repo, repo_list = new.env()){
   #TODO replace with safer Recursion. :(
   if(!exists(x = repo, envir = repo_list, inherits = FALSE)){
@@ -46,6 +58,8 @@ gh_recursive_remotes <- function(repo, repo_list = new.env()){
   as.list(repo_list)
 }
 
+# Given dependencies from a DESCRIPTION file, determine the recursive dependencies from
+# CRAN and GitHub.
 gh_recursive_deps <- function(description_data){
   CRAN_deps <- vector()
   GH_remotes <- vector()
@@ -83,6 +97,9 @@ gh_recursive_deps <- function(description_data){
 }
 
 # Adapted from: jimhester/autoinst/R/package.R
+# Call the Gepuro package list API to find github repository associated
+# with a package. Where multiple exact matches are found it just chooses the first. Forks
+# are not included in the search.
 get_gh_pkgs <- function(package_list){
   res <-
     purrr::map(package_list,

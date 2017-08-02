@@ -28,7 +28,7 @@ compare_version <- function(a, b){
   else{ compareVersion(a,b) }
 }
 
-# Remove R (>= <ver>) and other version qualifiers from 
+# Remove R (>= <ver>) and other version qualifiers from
 # list of package dependencies.
 sanitise_deps <- function(deps){
   dep_ver_matches <- regexec(pattern = "\\s*\\(>=\\s*[0-9.]+\\)",
@@ -76,7 +76,7 @@ vers[num_dots < 2] <- paste0(vers[num_dots < 2],".0")
 vers
 }
 
-# Given a list of Depends entries, extract the version associated 
+# Given a list of Depends entries, extract the version associated
 # with R or return version 0.0.0.
 get_R_dependency <- function(dep_spec){
   if(!(is.character(dep_spec) & length(dep_spec) > 0)) return("0.0.0")
@@ -96,6 +96,8 @@ is_R_file <- function(filename){
           text = filename) > 0
 }
 
+# Given a list or vector of package names, determine if they are installed,
+# returning a logical vector of indicators.
 are_installed <- function(pack_list){
   if(is.character(pack_list) & !is.null(pack_list)){
     purrr::map_lgl(pack_list, ~find_package(package = .))
@@ -104,6 +106,7 @@ are_installed <- function(pack_list){
   }
 }
 
+# Given a package name, determine if it is installed, returning a logical indicator.
 find_package <- function(package){
   result <- find.package(package = package, quiet = TRUE)
   ifelse(length(result > 0), TRUE, FALSE)
