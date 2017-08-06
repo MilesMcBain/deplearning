@@ -1,4 +1,5 @@
 library(datapasta)
+require("mgcv.helper")
 library("tidyr")
 library(rstudioapi)
 library(A3)

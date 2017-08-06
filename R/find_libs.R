@@ -17,10 +17,10 @@ find_doc_libs <- function(doc){
 
   # find dependencies
   patterns <- list(
-    library = "(?<=library\\()\"*[a-zA-Z0-9]+\"*(?=\\))",
-    require   = "(?<=require\\()\"*[a-zA-Z0-9]+\"*(?=\\))",
-    p_load = "(?<=p_load\\()\"*[a-zA-Z0-9]+\"*[\\s*\\,\\s*\"*[a-zA-Z0-9]+\"*]*(?=\\))",
-    `::` = "[a-zA-Z0-9]+(?=::)"
+    library = "(?<=library\\()\"*[a-zA-Z0-9.]+\"*(?=\\))",
+    require   = "(?<=require\\()\"*[a-zA-Z0-9.]+\"*(?=\\))",
+    p_load = "(?<=p_load\\()\"*[a-zA-Z0-9.]+\"*[\\s*\\,\\s*\"*[a-zA-Z0-9.]+\"*]*(?=\\))",
+    `::` = "[a-zA-Z0-9.]+(?=::)"
   )
   match_pos <- purrr::map(patterns, ~regexec(., doc, perl = TRUE))
   lib_matches <- purrr::map(match_pos, ~regmatches(doc, .)) %>%
