@@ -105,8 +105,8 @@ get_gh_pkgs <- function(package_list){
     purrr::map(package_list,
                ~get_gepuro_data(.)) %>%
     purrr::map(head,1) %>%
-    purrr::reduce(rbind)
-  if(is.data.frame(res)){
+    purrr::reduce(rbind, .init=tibble::tibble())
+  if(nrow(res) > 0){
     res$pkg_location <- res$pkg_name
     res$pkg_org <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 1)
     res$pkg_name <- vapply(strsplit(res$pkg_location, "/"), `[[`, character(1), 2)

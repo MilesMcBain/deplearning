@@ -15,7 +15,8 @@ Imports:
     tibble,
     jsonlite,
     magrittr,
-    memoise
+    memoise,
+    clisymbols
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
