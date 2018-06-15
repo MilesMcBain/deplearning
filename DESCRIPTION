@@ -3,6 +3,7 @@ Title: Analyse Dependencies of R Code
 Version: 0.4.0
 Authors@R: c(
     person("Miles", "McBain", email = "miles.mcbain@gmail.com", role = c("aut", "cre")),
+    person("Dave", "Kleinschmidt", role = "aut"),
     person("Jim","Hester", role = "ctb"),
     person("@Gepuro", role = "ctb"))
 Description: Check R source files or directories for dependencies. Determine if those
