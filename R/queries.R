@@ -66,7 +66,7 @@ depl_check_addin <- function(){
 # and file path version.
 depl_check_run <- function(lib_list){
   if(length(lib_list) == 0){
-    cat("[deplearning] found no depenencies in this code.\n")
+    cat("[deplearning] found no dependencies in this code.\n")
     return()
   }
   #remove base packages if present
